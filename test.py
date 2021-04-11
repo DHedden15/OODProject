@@ -1,5 +1,7 @@
 import tkinter as tk
-from tkinter import filedialog
+from tkinter import filedialog, font
+from tkinter.font import Font
+from tkinter import ttk
 
 from threading import Thread
 
@@ -11,11 +13,15 @@ class DocumentEditor:
 		self.frame = tk.Frame(self.root, height=500,width=500)
 		self.frame.grid_propagate(False)
 
-		self.frame.grid_rowconfigure(0,weight=1)
+		self.font = Font(family='Times New Roman',size=12)
+
+		self.frame.grid_rowconfigure(0,weight=0)
+		self.frame.grid_rowconfigure(1,weight=0)
+		self.frame.grid_rowconfigure(2,weight=1)
 		self.frame.grid_columnconfigure(0,weight=1)
 
 		self.scrollbar = tk.Scrollbar(self.frame)
-		self.scrollbar.grid(row=0,column=1,sticky='NSEW')
+		self.scrollbar.grid(row=2,column=1,sticky='NSEW')
 	
 		menubar = tk.Menu(self.root)
 		self.root.config(menu=menubar)
@@ -23,20 +29,33 @@ class DocumentEditor:
 		fileMenu = tk.Menu(menubar)
 		menubar.add_cascade(label="File",menu=fileMenu)
 
+		fonts = font.families()
+		self.variable = tk.StringVar(self.frame)
+		self.variable.set('Times New Roman')
+		self.variable.trace('w',self.fontchange)
+		self.fontMenu = tk.OptionMenu(self.frame,self.variable,*fonts)
+		self.fontMenu.grid(row=0,column=0,sticky='E')
+
+		self.line = ttk.Separator(self.frame,orient=tk.HORIZONTAL)
+		self.line.grid(row=1,column=0,sticky='EW')
+
 		fileMenu.add_command(label="Save as...",command=self.save)
 		fileMenu.add_command(label="Correct Spelling...",command=self.correct)
-		fileMenu.add_command(label="Main Menu",command=self.menu)
+		fileMenu.add_command(label="Main Menu",command=self.menu)		
 
 		self.text = tk.Text(self.frame,borderwidth=3)
 		self.text.insert("1.0",content)
-		self.text.grid(row=0,column=0,sticky='NSEW')
+		self.text.grid(row=2,column=0,sticky='NSEW')
 		self.scrollbar.config(command=self.text.yview)
-		self.text.config(font=("Times New Roman",12),undo=True,yscrollcommand=self.scrollbar.set)
+		self.text.config(font=self.font,undo=True,yscrollcommand=self.scrollbar.set)
 		
 		self.text.bind('<period>',self.handle)
 		self.frame.pack(fill='both',expand=True)
 		self.frame.pack_propagate(0)
 	
+	def fontchange(self,*args):
+		self.font.config(family=self.variable.get())
+
 	def menu(self):
 		self.newWindow = tk.Toplevel(self.root)
 		self.app = MainMenu(self.newWindow)		
