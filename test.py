@@ -9,8 +9,7 @@ class DocumentEditor:
 	def __init__(self, root, content=''):
 		self.root = root	
 		self.frame = tk.Frame(self.root, height=500,width=500)
-		self.frame.title = "New Document"
-
+		self.root.title="DOCUMENT"
 		self.top = tk.Frame(self.frame)
 		self.bottom = tk.Frame(self.frame)
 		self.top.pack(side=tk.TOP)
@@ -18,16 +17,17 @@ class DocumentEditor:
 		
 		self.scrollbar = tk.Scrollbar(self.frame)
 		self.scrollbar.pack(in_=self.bottom, side=tk.RIGHT, fill=tk.Y)
+	
+		menubar = tk.Menu(self.root)
+		self.root.config(menu=menubar)
 		
-		self.menubutton = tk.Button(self.frame, text="Main Menu", command=self.menu)
-		self.menubutton.pack(in_=self.top, side=tk.LEFT)
-		
-		self.savebutton = tk.Button(self.frame, text="Save", command=self.save)
-		self.savebutton.pack(in_=self.top, side=tk.LEFT)
+		fileMenu = tk.Menu(menubar)
+		menubar.add_cascade(label="File",menu=fileMenu)
 
-		self.correctbutton = tk.Button(self.frame, text="Correct", command=self.correct)
-		self.correctbutton.pack(in_=self.top, side=tk.LEFT)
-		
+		fileMenu.add_command(label="Save as...",command=self.save)
+		fileMenu.add_command(label="Correct Spelling...",command=self.correct)
+		fileMenu.add_command(label="Main Menu",command=self.menu)
+
 		self.text = tk.Text(self.frame, height=50, width=50)
 		self.text.insert("1.0",content)
 		self.text.pack(in_=self.bottom, side=tk.LEFT, fill=tk.BOTH, expand = tk.YES)	
@@ -102,8 +102,9 @@ class MainMenu:
 		open_button = tk.Button(self.root, text="Open Document", command=self.open)
 		open_button.pack()
 	
-	def new(self,content=''):
+	def new(self,content='',title='New Document'):
 		self.newWindow = tk.Toplevel(self.root)
+		self.newWindow.title = title
 		self.app = DocumentEditor(self.newWindow,content)
 		self.root.withdraw()
 
@@ -114,7 +115,7 @@ class MainMenu:
 		f = open(filename,'r')
 		i = f.read()
 		f.close()
-		self.new(i)
+		self.new(i,filename.split('.')[0])
 	
 	def run(self):
 		self.root.mainloop()	
