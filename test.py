@@ -2,7 +2,7 @@ import tkinter as tk
 from tkinter import filedialog, font
 from tkinter.font import Font
 from tkinter import ttk
-
+import time
 from threading import Thread
 
 from gingerit.gingerit import GingerIt
@@ -83,22 +83,14 @@ class DocumentEditor:
 		f.close()	
 
 	def parse(self,inp,returns,thread_n):
-		parser = GingerIt()
+		parser = GingerIt()	
 		returns[thread_n] = parser.parse(inp)['result']
 
 	def correct(self):
 		i = self.text.get("1.0","end-1c")
 		
-		i = i.split('.')
-		i = ['.'.join(i[x:x+10]) for x in range(0, len(i), 10)]		
-		for x in range(0,len(i)):
-			a = i[x]
-			if a.count(' ') > 9:
-				a = a.split(' ')
-				a = [' '.join(a[b:b+5]) for b in range(0, len(a), 5)]
-				i[x] = a[0]
-				i.insert(x+1,a[1])
-	
+		i = [x + '.' for x in i.split('.') if x != '']	
+		
 		returns = {}
 
 		threads = []
@@ -115,9 +107,9 @@ class DocumentEditor:
 		out = ''
 		for i in range(0,len(i)):
 			out += returns[i]
-		print(out)
+		out = out[:-1]
 		self.text.delete('1.0', tk.END)
-		self.text.insert("1.0", out)
+		self.text.insert("1.0", self.out)
 	
 	def handle(self,event):
 		self.correct()	
