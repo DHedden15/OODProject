@@ -1,15 +1,12 @@
-import tkinter as tk 
+import tkinter as tk
 from tkinter import filedialog
 import pickle
 
 from gingerit.gingerit import GingerIt
 
 class DocumentEditor:
-	def __init__(self, master):
-		self.master = master
-		
-		self.text = tk.Text(root, height=5, width=50)
-		self.text.pack()
+	def __init__(self, root):
+		self.root = root
 
 		self.savebutton = tk.Button(root, text="Save", command=self.save)
 		self.savebutton.pack()
@@ -19,7 +16,11 @@ class DocumentEditor:
 
 		self.correctbutton = tk.Button(root, text="Correct", command=self.correct)
 		self.correctbutton.pack()
-
+		
+		self.text = tk.Text(root, height=50, width=50)
+		self.text.pack(side=tk.LEFT, fill=tk.BOTH, expand = tk.YES)
+		self.text.bind('<Key>',self.handle)
+		
 	def save(self):
 		i = self.text.get("1.0","end-1c")
 		filename = filedialog.asksaveasfilename(initialdir = "./",title = "Select file",filetypes = (("PhonetikWrite files","*.pwf"),("all files","*.*")))
@@ -42,11 +43,18 @@ class DocumentEditor:
 		result = parser.parse(i)['result']
 		self.text.delete('1.0', tk.END)
 		self.text.insert("1.0",result)
-				
+	
+	def handle(self,event):
+		if event.char == '.':	
+			self.correct()	
+
+	def run(self):
+		self.root.mainloop()
+	
 root = tk.Tk()
 root.geometry("500x500")
 root.title("PhonetikWrite")
 
 gui = DocumentEditor(root)
 
-tk.mainloop()
+gui.run()
