@@ -109,7 +109,7 @@ class DocumentEditor:
 			out += returns[i]
 		out = out[:-1]
 		self.text.delete('1.0', tk.END)
-		self.text.insert("1.0", self.out)
+		self.text.insert("1.0", out)
 	
 	def handle(self,event):
 		self.correct()	
