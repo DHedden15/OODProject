@@ -29,12 +29,22 @@ class DocumentEditor:
 		fileMenu = tk.Menu(menubar)
 		menubar.add_cascade(label="File",menu=fileMenu)
 
+		self.settingsFrame = tk.Frame(self.frame)
+		self.settingsFrame.grid(row=0,column=0,sticky='E')
 		fonts = font.families()
-		self.variable = tk.StringVar(self.frame)
-		self.variable.set('Times New Roman')
-		self.variable.trace('w',self.fontchange)
-		self.fontMenu = tk.OptionMenu(self.frame,self.variable,*fonts)
-		self.fontMenu.grid(row=0,column=0,sticky='E')
+		self.fontvariable = tk.StringVar(self.frame)
+		self.fontvariable.set('Times New Roman')
+		self.fontvariable.trace('w',self.fontchange)
+		self.fontMenu = tk.OptionMenu(self.settingsFrame,self.fontvariable,*fonts)
+		self.fontMenu.grid(row=0,column=0)
+
+		sizes = range(0,100)
+		self.fontsize = tk.IntVar(self.frame)
+		self.fontsize.set(12)
+		self.fontsize.trace('w', self.sizechange)
+		self.sizeMenu = tk.OptionMenu(self.settingsFrame,self.fontsize,*sizes)
+		self.sizeMenu.grid(row=0,column=1)
+				
 
 		self.line = ttk.Separator(self.frame,orient=tk.HORIZONTAL)
 		self.line.grid(row=1,column=0,sticky='EW')
@@ -52,9 +62,12 @@ class DocumentEditor:
 		self.text.bind('<period>',self.handle)
 		self.frame.pack(fill='both',expand=True)
 		self.frame.pack_propagate(0)
+
+	def sizechange(self,*args):
+		self.font.config(size=self.fontsize.get())
 	
 	def fontchange(self,*args):
-		self.font.config(family=self.variable.get())
+		self.font.config(family=self.fontvariable.get())
 
 	def menu(self):
 		self.newWindow = tk.Toplevel(self.root)
