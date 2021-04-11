@@ -9,14 +9,13 @@ class DocumentEditor:
 	def __init__(self, root, content=''):
 		self.root = root	
 		self.frame = tk.Frame(self.root, height=500,width=500)
-		self.root.title="DOCUMENT"
-		self.top = tk.Frame(self.frame)
-		self.bottom = tk.Frame(self.frame)
-		self.top.pack(side=tk.TOP)
-		self.bottom.pack(side=tk.BOTTOM,fill=tk.BOTH,expand=True)
-		
+		self.frame.grid_propagate(False)
+
+		self.frame.grid_rowconfigure(0,weight=1)
+		self.frame.grid_columnconfigure(0,weight=1)
+
 		self.scrollbar = tk.Scrollbar(self.frame)
-		self.scrollbar.pack(in_=self.bottom, side=tk.RIGHT, fill=tk.Y)
+		self.scrollbar.grid(row=0,column=1,sticky='NSEW')
 	
 		menubar = tk.Menu(self.root)
 		self.root.config(menu=menubar)
@@ -28,14 +27,14 @@ class DocumentEditor:
 		fileMenu.add_command(label="Correct Spelling...",command=self.correct)
 		fileMenu.add_command(label="Main Menu",command=self.menu)
 
-		self.text = tk.Text(self.frame, height=50, width=50)
+		self.text = tk.Text(self.frame,borderwidth=3)
 		self.text.insert("1.0",content)
-		self.text.pack(in_=self.bottom, side=tk.LEFT, fill=tk.BOTH, expand = tk.YES)	
+		self.text.grid(row=0,column=0,sticky='NSEW')
 		self.scrollbar.config(command=self.text.yview)
-		self.text.config(yscrollcommand=self.scrollbar.set)
+		self.text.config(font=("Times New Roman",12),undo=True,yscrollcommand=self.scrollbar.set)
 		
 		self.text.bind('<period>',self.handle)
-		self.frame.pack()
+		self.frame.pack(fill='both',expand=True)
 		self.frame.pack_propagate(0)
 	
 	def menu(self):
@@ -57,7 +56,7 @@ class DocumentEditor:
 
 	def correct(self):
 		i = self.text.get("1.0","end-1c")
-		print(i)
+		
 		i = i.split('.')
 		i = ['.'.join(i[x:x+10]) for x in range(0, len(i), 10)]		
 		for x in range(0,len(i)):
@@ -67,7 +66,7 @@ class DocumentEditor:
 				a = [' '.join(a[b:b+5]) for b in range(0, len(a), 5)]
 				i[x] = a[0]
 				i.insert(x+1,a[1])
-		print(i)
+	
 		returns = {}
 
 		threads = []
