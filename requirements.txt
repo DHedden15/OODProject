@@ -1,1 +1,7 @@
-gingerit
+numpy
+jellyfish
+textblob
+enchant
+symspellpy
+pkg_resources
+pickle
