@@ -5,7 +5,7 @@ from tkinter import ttk
 import time
 from threading import Thread
 
-from gingerit.gingerit import GingerIt
+from algo import Algo
 
 class DocumentEditor:
 	def __init__(self, root, content=''):
@@ -81,11 +81,22 @@ class DocumentEditor:
 		f = open(filename,'w')
 		f.write(i)
 		f.close()	
-
+	
+	def check_word(self,word):	
+		a = Algo(word)
+		if (word == 'millen'):
+			print(a.candidates)
+		return a.out
+	
 	def parse(self,inp,returns,thread_n):
-		parser = GingerIt()	
-		returns[thread_n] = parser.parse(inp)['result']
-
+		inp = inp.split(' ')
+		for i in range(0,len(inp)):
+			final = inp[i][-1:]
+			to_check = inp[i] if final != '.' else inp[i][:-1]
+			inp[i] = self.check_word(to_check) if final != '.' else self.check_word(to_check) + '.'
+		inp = ' '.join(inp)
+		returns[thread_n] = inp
+ 
 	def correct(self):
 		i = self.text.get("1.0","end-1c")
 		
