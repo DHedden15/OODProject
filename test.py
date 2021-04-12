@@ -3,17 +3,35 @@ from tkinter import filedialog, font
 from tkinter.font import Font
 from tkinter import ttk
 import time
-from threading import Thread
-
-from algo import Algo
+from threading import * 
+import pkg_resources
+from symspellpy import SymSpell, Verbosity
+import pickle
+import multiprocessing
+from jellyfish import *
+from textblob import Word
+import enchant
+from numpy import exp 
+import numpy as np
+from symspellpy import SymSpell, Verbosity
+import pkg_resources
+from copy import deepcopy
 
 class DocumentEditor:
 	def __init__(self, root, content=''):
+		self.mutex = Lock()
+		try:
+			self.symspell = pickle.load(open('symspell.pkl','rb'))
+		except:
+			self.symspell = SymSpell(max_dictionary_edit_distance=2, prefix_length=7)
+			dictionary_path = pkg_resources.resource_filename("symspellpy", "frequency_dictionary_en_82_765.txt")
+			self.symspell.load_dictionary(dictionary_path, term_index=0, count_index=1)
+			pickle.dump(self.symspell,open('symspell.pkl','wb'))
 		self.root = root	
 		self.frame = tk.Frame(self.root, height=500,width=500)
 		self.frame.grid_propagate(False)
 
-		self.font = Font(family='Times New Roman',size=12)
+		self.font = Font(family='Times New Roman',size=20)
 
 		self.frame.grid_rowconfigure(0,weight=0)
 		self.frame.grid_rowconfigure(1,weight=0)
@@ -38,13 +56,14 @@ class DocumentEditor:
 		self.fontMenu = tk.OptionMenu(self.settingsFrame,self.fontvariable,*fonts)
 		self.fontMenu.grid(row=0,column=0)
 
-		sizes = range(0,100)
+		sizes = range(1,101)
 		self.fontsize = tk.IntVar(self.frame)
-		self.fontsize.set(12)
+		self.fontsize.set(50)
 		self.fontsize.trace('w', self.sizechange)
 		self.sizeMenu = tk.OptionMenu(self.settingsFrame,self.fontsize,*sizes)
 		self.sizeMenu.grid(row=0,column=1)
-				
+		
+		self.corrected = ''	
 
 		self.line = ttk.Separator(self.frame,orient=tk.HORIZONTAL)
 		self.line.grid(row=1,column=0,sticky='EW')
@@ -82,45 +101,52 @@ class DocumentEditor:
 		f.write(i)
 		f.close()	
 	
-	def check_word(self,word):	
-		a = Algo(word)
-		if (word == 'millen'):
-			print(a.candidates)
+	def check_word(self,word,mutex):	
+		a = Algo(word,self.symspell,mutex)
 		return a.out
 	
-	def parse(self,inp,returns,thread_n):
-		inp = inp.split(' ')
-		for i in range(0,len(inp)):
-			final = inp[i][-1:]
-			to_check = inp[i] if final != '.' else inp[i][:-1]
-			inp[i] = self.check_word(to_check) if final != '.' else self.check_word(to_check) + '.'
-		inp = ' '.join(inp)
+	def parse(self,inp,returns,thread_n,mutex):
+		final = inp[-1:]
+		to_check = inp if final != '.' else inp[:-1]
+		if to_check != '':
+			#self.mutex.acquire()
+			inp = self.check_word(to_check,mutex)
+			#self.mutex.release()
 		returns[thread_n] = inp
  
 	def correct(self):
-		i = self.text.get("1.0","end-1c")
-		
-		i = [x + '.' for x in i.split('.') if x != '']	
+		original = self.text.get("1.0","end-1c")
+		orig = deepcopy(original)
+		orig = orig.replace(self.corrected,'')
+		i = deepcopy(orig)
+		caps = [x for x in i.split(' ') if x != '']
+		i = [x.lower() for x in caps] 
 		
 		returns = {}
-
-		threads = []
 		
+		threads = []
+		mutex = Lock()
 		for j in range(0,len(i)):
-			threads.append(Thread(target=self.parse,args=(i[j],returns,j)))
-	
+			threads.append(Thread(target=self.parse,args=(i[j],returns,j,mutex)))
+
 		for thread in threads:
 			thread.start()
 
 		for thread in threads:
 			thread.join()		
-		
 		out = ''
-		for i in range(0,len(i)):
-			out += returns[i]
-		out = out[:-1]
+		for x in range(0,len(i)):
+			if (caps[x][0].isupper()):
+				out += returns[x].capitalize() + " "
+			else:
+				out += returns[x] + ' '	
+		out = deepcopy(self.text.get('1.0','end-1c')).replace(orig,out)
+		out = out.replace(' .','.')
+		if out[-1:] == ' ':
+			out = out[:-1]
 		self.text.delete('1.0', tk.END)
 		self.text.insert("1.0", out)
+		self.corrected = out
 	
 	def handle(self,event):
 		self.correct()	
@@ -153,7 +179,69 @@ class MainMenu:
 	
 	def run(self):
 		self.root.mainloop()	
+
+class Algo:
+	def __init__(self,inp,symspell,mutex):
+		self.inp = inp	
+		self.candidates = [x for x,_ in Word(inp).spellcheck()]	
+		mutex.acquire()
+		e = enchant.Dict('en').suggest(inp)
+		s = symspell.lookup(inp,Verbosity.ALL,max_edit_distance=2)
+		mutex.release()
+		self.candidates += e
+		self.candidates += [x.term for x in s]
+
+		self.options = []
+		for option in self.candidates:
+			comparison = soundex(option) == soundex(inp)
+			comparison = comparison and not bool([x for x in [' ','-'] if x in option])
+			if comparison and option[0].islower():			
+				self.options = self.options + [option]
 		
+		init = False
+		distances = None
+		for option in self.options:
+			count = self.options.count(option)
+			done = option in distances[:,0] if init == True else False
+			if count >= 2 and not done:
+				dist = -1 * levenshtein_distance(inp,option)
+				dist = dist + jaro_distance(inp,option)
+				dist = dist * self.options.count(option)
+				pair = np.array([[option,dist]])
+				if init == False:
+					distances = pair
+					init = True
+				else:
+					distances = np.concatenate((distances,pair))	
+		if init == True:
+			distances[:,1] = self.softmax(distances[:,1])	
+			if len(np.unique(distances[:,1])) < len(distances[:,1]):
+				# If it's a random choice...
+				win = None
+				freq = None
+				for word in distances[:,0]:
+					try:
+						c_freq = symspell.words[str(word)]
+					except:
+						c_freq = 0
+					if win == None:
+						win = str(word)
+						freq = c_freq
+					else:
+						if freq < c_freq:
+							win = str(word)
+							freq = c_freq	
+				self.out = win
+			else:
+				self.out = distances[np.argmax(distances,axis=0)[1]][0]	
+		else:
+			self.out = self.inp
+		#mutex.release()
+	def softmax(self,arr):
+		arr = exp(arr.astype(float))
+		arr = arr / arr.sum()
+		return arr
+
 root = tk.Tk()
 
 gui = MainMenu(root)
