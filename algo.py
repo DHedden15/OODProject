@@ -37,8 +37,25 @@ class Algo:
 					distances = np.concatenate((distances,pair))	
 		if init == True:
 			distances[:,1] = self.softmax(distances[:,1])	
-			print(distances)
-			self.out = distances[np.argmax(distances,axis=0)[1]][0]	
+			if len(np.unique(distances[:,1])) < len(distances[:,1]):
+				# If it's a random choice...
+				win = None
+				freq = None
+				for word in distances[:,0]:
+					try:
+						c_freq = symspell.words[str(word)]
+					except:
+						c_freq = 0
+					if win == None:
+						win = str(word)
+						freq = c_freq
+					else:
+						if freq < c_freq:
+							win = str(word)
+							freq = c_freq	
+				self.out = win
+			else:
+				self.out = distances[np.argmax(distances,axis=0)[1]][0]	
 		else:
 			self.out = self.inp
 	def softmax(self,arr):
