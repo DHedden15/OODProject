@@ -1,3 +1,4 @@
+#!/Users/will/.pyenv/shims/python3
 import tkinter as tk
 from tkinter import filedialog, font
 from tkinter.font import Font
@@ -12,23 +13,18 @@ from textblob import Word
 import enchant
 from numpy import exp
 import numpy as np
-from symspellpy import SymSpell, Verbosity
 from spellchecker import SpellChecker
 import pkg_resources
 import re
 from copy import deepcopy
+from wordfreq import word_frequency
+import math
+import faulthandler
+
+faulthandler.enable()
 
 class DocumentEditor:
 	def __init__(self, root, content=''):
-		self.mutex = Lock()
-		try:
-			self.symspell = pickle.load(open('symspell.pkl','rb'))
-		except:
-			self.symspell = SymSpell(max_dictionary_edit_distance=2, prefix_length=7)
-			dictionary_path = pkg_resources.resource_filename("symspellpy", "frequency_dictionary_en_82_765.txt")
-			self.symspell.load_dictionary(dictionary_path, term_index=0, count_index=1)
-			pickle.dump(self.symspell,open('symspell.pkl','wb'))
-		self.e = enchant.Dict('en')
 		self.root = root
 		self.frame = tk.Frame(self.root, height=500,width=500)
 		self.frame.grid_propagate(False)
@@ -71,7 +67,7 @@ class DocumentEditor:
 		self.line.grid(row=1,column=0,sticky='EW')
 
 		fileMenu.add_command(label="Save as...",command=self.save)
-		fileMenu.add_command(label="Correct Spelling...",command=self.correct,accelerator="Ctrl+G")
+		fileMenu.add_command(label="Correct Spelling...",command=self.correct,accelerator="Cmd+G")
 		fileMenu.add_command(label="Main Menu",command=self.menu)
 
 		self.text = tk.Text(self.frame,borderwidth=3)
@@ -103,30 +99,21 @@ class DocumentEditor:
 		f.write(i)
 		f.close()
 
-	def check_word(self,word,mutex,e):
-		a = Algo(word,self.symspell,mutex,e)
-		return a.out
-
-	def parse(self,inp,returns,thread_n,mutex):
-		e = enchant.Dict('en')
-		final = inp[-1:]
-		to_check = inp if final != '.' else inp[:-1]
-		if to_check != '':
-			inp = self.check_word(to_check,mutex,e)
-		returns[thread_n] = inp
-
 	def parse_chunk(self,i,returns,j,mutex):
 		# Chunk is array of 100 word strings.
 		chunk = i[j]
+		mutex.acquire()
 		e = enchant.Dict('en')
+		mutex.release()
 		out = []
 		for i in range(0,len(chunk)):
 			if chunk[i] != '':
-				a = Algo(chunk[i],self.symspell,mutex,e)
+				a = Algo(chunk[i],e,mutex)
 				out.append(a.out)
-		mutex.acquire()
 		returns[j] = out
-		mutex.release()
+
+	def handle(self,event=None):
+		self.correct()
 
 	def correct(self):
 		original = self.text.get("1.0","end-1c")
@@ -173,12 +160,11 @@ class DocumentEditor:
 					out += words[i] + period + " " + ('\n' * caps[i].count('\n'))
 
 			out = re.sub('[\n\t\s]+\.','.',out).rstrip()
+			mutex.acquire()
 			self.text.delete('1.0', tk.END)
 			self.text.insert("1.0", out)
+			mutex.release()
 			self.corrected = out
-
-	def handle(self,event):
-		self.correct()
 
 class MainMenu:
 	def __init__(self,root):
@@ -210,19 +196,21 @@ class MainMenu:
 		self.root.mainloop()
 
 class Algo:
-	def __init__(self,inp,symspell,mutex,e):
+	def __init__(self,inp,e,mutex):
+		##pdb.set_trace()
 		self.inp = inp
 		self.out = self.inp
 		####### IMPORTANT
+		mutex.acquire()
 		correct = e.check(self.inp)
+		mutex.release()
 		if not correct:
-			self.correct_word(mutex,symspell,e)
+			self.correct_word(e,mutex)
 
-	def correct_word(self,mutex,symspell,e):
-		#self.candidates = [x for x,_ in Word(self.inp).spellcheck()]
-		e = e.suggest(self.inp)
-		self.candidates = e
-
+	def correct_word(self,e,mutex):
+		mutex.acquire()
+		self.candidates = e.suggest(self.inp)
+		mutex.release()
 		self.options = []
 		for option in self.candidates:
 			comparison = soundex(option) == soundex(self.inp)
@@ -247,25 +235,7 @@ class Algo:
 					distances = np.concatenate((distances,pair))
 		if init == True:
 			distances[:,1] = self.softmax(distances[:,1])
-			if len(np.unique(distances[:,1])) < len(distances[:,1]):
-				# If it's a random choice...
-				win = None
-				freq = None
-				for word in distances[:,0]:
-					try:
-						c_freq = symspell.words[str(word)]
-					except:
-						c_freq = 0
-					if win == None:
-						win = str(word)
-						freq = c_freq
-					else:
-						if freq < c_freq:
-							win = str(word)
-							freq = c_freq
-				self.out = win
-			else:
-				self.out = distances[np.argmax(distances,axis=0)[1]][0]#['word']
+			self.out = distances[np.argmax(distances,axis=0)[1]][0]
 		else:
 			self.out = self.inp
 
