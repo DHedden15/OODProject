@@ -67,7 +67,7 @@ class DocumentEditor:
 		self.line.grid(row=1,column=0,sticky='EW')
 
 		fileMenu.add_command(label="Save as...",command=self.save)
-		fileMenu.add_command(label="Correct Spelling...",command=self.correct,accelerator="Cmd+G")
+		fileMenu.add_command(label="Correct Spelling...",command=self.handle,accelerator="Cmd+G")
 		fileMenu.add_command(label="Main Menu",command=self.menu)
 
 		self.text = tk.Text(self.frame,borderwidth=3)
@@ -113,20 +113,24 @@ class DocumentEditor:
 		returns[j] = out
 
 	def handle(self,event=None):
+		current = self.text.index(tk.CURRENT)
 		self.correct()
+		print(current)
+		#self.text.mark_set("insert",float(current))
+		#self.text.insert(tk.CURRENT,'')
 
 	def correct(self):
 		original = self.text.get("1.0","end-1c")
+		pos = deepcopy(tk.CURRENT)
 		orig = deepcopy(original)
 		if orig != self.corrected:
 			i = deepcopy(orig)
 			caps = [x for x in i.split(' ') if x != '']
-			i = [x.lower().replace('\n','') for x in caps]
+			i = [x.lower() for x in caps]
 			i = [i[a:a + 100] for a in range(0, len(i), 100)]
 			returns = {}
 			threads = []
 			mutex = Lock()
-			start = time.time()
 			for j in range(0,len(i)):
 				t = Thread(target=self.parse_chunk,args=(i,returns,j,mutex))
 				threads.append(t)
@@ -134,8 +138,6 @@ class DocumentEditor:
 				thread.start()
 			for thread in threads:
 				thread.join()
-			end = time.time()
-			print(end-start)
 			out = ''
 			next = 0
 			sortedKeys = sorted(returns.keys())
@@ -143,6 +145,12 @@ class DocumentEditor:
 			out = ''
 			for i in range(0,len(words)):
 				# if word before ends in .
+				# S = \w*[a-zA-Z]*\w*
+				r = re.compile('\s*[a-zA-Z]+')
+				r2 = re.compile('[a-zA-Z]+\s*')
+				w = [x for x in r.findall(caps[i]) if x != '']
+				w2 = [x for x in r2.findall(caps[i]) if x != '']
+				print(w,w2)
 				# or if first word
 				isFirst = True if i == 0 or '.' in caps[i-1] else False
 				if isFirst and caps[i][0] == '\n':
@@ -162,7 +170,9 @@ class DocumentEditor:
 					period = '.' if '.' in caps[i] and not '.' in words[i] else ''
 					out += words[i] + period + " " + ('\n' * caps[i].count('\n'))
 
-			out = re.sub('[\n\t\s]+\.','.',out).rstrip()
+			out = re.sub('[\n\t\s]+\.','.',out)#.rstrip()
+			current = self.text.index("current")
+			self.text.mark_set("insert",float(current))
 			self.text.delete('1.0', tk.END)
 			self.text.insert("1.0", out)
 			self.corrected = out
