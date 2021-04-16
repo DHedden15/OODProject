@@ -19,9 +19,6 @@ import re
 from copy import deepcopy
 from wordfreq import word_frequency
 import math
-import faulthandler
-
-faulthandler.enable()
 
 class DocumentEditor:
 	def __init__(self, root, content=''):
@@ -115,9 +112,17 @@ class DocumentEditor:
 	def handle(self,event=None):
 		current = self.text.index(tk.CURRENT)
 		self.correct()
-		print(current)
-		#self.text.mark_set("insert",float(current))
-		#self.text.insert(tk.CURRENT,'')
+
+	def whitespace(self,inp):
+		whitespace = []
+		for word in inp:
+			try:
+				index = re.search('\s+', word).start()
+				spaces = re.findall('\s+',word)[0]
+				whitespace.append([index,spaces])
+			except:
+				whitespace.append([False,False])
+		return whitespace
 
 	def correct(self):
 		original = self.text.get("1.0","end-1c")
@@ -126,6 +131,7 @@ class DocumentEditor:
 		if orig != self.corrected:
 			i = deepcopy(orig)
 			caps = [x for x in i.split(' ') if x != '']
+			whitespace = self.whitespace(caps)
 			i = [x.lower() for x in caps]
 			i = [i[a:a + 100] for a in range(0, len(i), 100)]
 			returns = {}
@@ -144,31 +150,28 @@ class DocumentEditor:
 			words = [j for sub in [returns.get(x) for x in sortedKeys] for j in sub]
 			out = ''
 			for i in range(0,len(words)):
-				# if word before ends in .
-				# S = \w*[a-zA-Z]*\w*
-				r = re.compile('\s*[a-zA-Z]+')
-				r2 = re.compile('[a-zA-Z]+\s*')
-				w = [x for x in r.findall(caps[i]) if x != '']
-				w2 = [x for x in r2.findall(caps[i]) if x != '']
-				print(w,w2)
 				# or if first word
 				isFirst = True if i == 0 or '.' in caps[i-1] else False
-				if isFirst and caps[i][0] == '\n':
+				if isFirst:
 					period = '.' if '.' in caps[i] and not '.' in words[i] else ''
-					newline = '\n' * caps[i].count('\n')
-					out += newline + words[i][0].upper() + words[i][1:] + period + " "
-				elif isFirst:
-					period = '.' if '.' in caps[i] and not '.' in words[i] else ''
-					newline = '\n' * caps[i].count('\n')
-					out += words[i][0].upper() + words[i][1:] + period + " " + newline
+					w = words[i][0].upper() + words[i][1:] + period + " "
+					if whitespace[i][0] != False:
+						if whitespace[i][0] != 0:
+							w += whitespace[i][1]
+						else:
+							w = whitespace[i][1] + w
+					out += w
 				elif caps[i].lower() != caps[i]:
 					out += caps[i] + " "
-				elif caps[i][0] == '\n':
-					period = '.' if '.' in caps[i] and not '.' in words[i] else ''
-					out += ('\n' * caps[i].count('\n')) + words[i] + period + " "
 				else:
 					period = '.' if '.' in caps[i] and not '.' in words[i] else ''
-					out += words[i] + period + " " + ('\n' * caps[i].count('\n'))
+					w = words[i] + period + " "
+					if whitespace[i][0] != False:
+						if whitespace[i][0] != 0:
+							w += whitespace[i][1]
+						else:
+							w = whitespace[i][1] + w
+					out += w
 
 			out = re.sub('[\n\t\s]+\.','.',out)#.rstrip()
 			current = self.text.index("current")
