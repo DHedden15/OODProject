@@ -124,7 +124,9 @@ class DocumentEditor:
 			if chunk[i] != '':
 				a = Algo(chunk[i],self.symspell,mutex,e)
 				out.append(a.out)
+		mutex.acquire()
 		returns[j] = out
+		mutex.release()
 
 	def correct(self):
 		original = self.text.get("1.0","end-1c")
@@ -137,7 +139,6 @@ class DocumentEditor:
 			returns = {}
 			threads = []
 			mutex = Lock()
-			start = time.time()
 			for j in range(0,len(i)):
 				t = Thread(target=self.parse_chunk,args=(i,returns,j,mutex))
 				threads.append(t)
@@ -145,9 +146,6 @@ class DocumentEditor:
 				thread.start()
 			for thread in threads:
 				thread.join()
-
-			end = time.time()
-			print(end-start)
 			out = ''
 			next = 0
 			sortedKeys = sorted(returns.keys())
