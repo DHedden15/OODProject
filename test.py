@@ -15,6 +15,7 @@ import numpy as np
 from symspellpy import SymSpell, Verbosity
 from spellchecker import SpellChecker
 import pkg_resources
+import re
 from copy import deepcopy
 
 class DocumentEditor:
@@ -70,7 +71,7 @@ class DocumentEditor:
 		self.line.grid(row=1,column=0,sticky='EW')
 
 		fileMenu.add_command(label="Save as...",command=self.save)
-		fileMenu.add_command(label="Correct Spelling...",command=self.correct)
+		fileMenu.add_command(label="Correct Spelling...",command=self.correct,accelerator="Ctrl+G")
 		fileMenu.add_command(label="Main Menu",command=self.menu)
 
 		self.text = tk.Text(self.frame,borderwidth=3)
@@ -111,71 +112,72 @@ class DocumentEditor:
 		final = inp[-1:]
 		to_check = inp if final != '.' else inp[:-1]
 		if to_check != '':
-			#self.mutex.acquire()
 			inp = self.check_word(to_check,mutex,e)
-			#self.mutex.release()
 		returns[thread_n] = inp
 
-	def parse_chunk(self,chunk,returns,j):
-		threads = []
-		ret = {}
-		mutex = Lock()
+	def parse_chunk(self,i,returns,j,mutex):
+		# Chunk is array of 100 word strings.
+		chunk = i[j]
+		e = enchant.Dict('en')
+		out = []
 		for i in range(0,len(chunk)):
-			t = Thread(target=self.parse,args=(chunk[i],ret,i,mutex))
-			threads.append(t)
-		for thread in threads:
-			thread.start()
-		for thread in threads:
-			thread.join()
-
-		out = list(ret.values())
+			if chunk[i] != '':
+				a = Algo(chunk[i],self.symspell,mutex,e)
+				out.append(a.out)
 		returns[j] = out
 
 	def correct(self):
 		original = self.text.get("1.0","end-1c")
 		orig = deepcopy(original)
-		o = deepcopy(orig)
-		orig = orig.replace(self.corrected,'')
-		i = deepcopy(orig)
-		caps = [x for x in i.split(' ') if x != '']
-		i = [x.lower() for x in caps]
-		#i = [i[j:j+50] for j in range(0,len(i),50)]
+		if orig != self.corrected:
+			i = deepcopy(orig)
+			caps = [x for x in i.split(' ') if x != '']
+			i = [x.lower().replace('\n','') for x in caps]
+			i = [i[a:a + 100] for a in range(0, len(i), 100)]
+			returns = {}
+			threads = []
+			mutex = Lock()
+			start = time.time()
+			for j in range(0,len(i)):
+				t = Thread(target=self.parse_chunk,args=(i,returns,j,mutex))
+				threads.append(t)
+			for thread in threads:
+				thread.start()
+			for thread in threads:
+				thread.join()
 
-		returns = {}
-		'''for j in range(0,len(i)):
-			t = Thread(target=self.parse_chunk,args=(i[j],returns,j))
-			threads.append(t)
-			print(f"Launching thread 1.{j}")
-		for thread in threads:
-			thread.start()
-		for thread in threads:
-			thread.join()'''
+			end = time.time()
+			print(end-start)
+			out = ''
+			next = 0
+			sortedKeys = sorted(returns.keys())
+			words = [j for sub in [returns.get(x) for x in sortedKeys] for j in sub]
+			out = ''
+			for i in range(0,len(words)):
+				# if word before ends in .
+				# or if first word
+				isFirst = True if i == 0 or '.' in caps[i-1] else False
+				if isFirst and caps[i][0] == '\n':
+					period = '.' if '.' in caps[i] and not '.' in words[i] else ''
+					newline = '\n' * caps[i].count('\n')
+					out += newline + words[i][0].upper() + words[i][1:] + period + " "
+				elif isFirst:
+					period = '.' if '.' in caps[i] and not '.' in words[i] else ''
+					newline = '\n' * caps[i].count('\n')
+					out += words[i][0].upper() + words[i][1:] + period + " " + newline
+				elif caps[i].lower() != caps[i]:
+					out += caps[i] + " "
+				elif caps[i][0] == '\n':
+					period = '.' if '.' in caps[i] and not '.' in words[i] else ''
+					out += ('\n' * caps[i].count('\n')) + words[i] + period + " "
+				else:
+					period = '.' if '.' in caps[i] and not '.' in words[i] else ''
+					out += words[i] + period + " " + ('\n' * caps[i].count('\n'))
 
-
-		threads = []
-		mutex = Lock()
-		for j in range(0,len(i)):
-			threads.append(Thread(target=self.parse,args=(i[j],returns,j,mutex)))
-
-		for thread in threads:
-			thread.start()
-
-		for thread in threads:
-			thread.join()
-		out = ''
-		for x in range(0,len(i)):
-			if (caps[x][0].isupper()):
-				out += returns[x].capitalize() + " "
-			else:
-				out += returns[x] + ' '
-
-		out = deepcopy(self.text.get('1.0','end-1c')).replace(orig,out)
-		out = out.replace(' .','.')
-		if out[-1:] == ' ':
-			out = out[:-1]
-		self.text.delete('1.0', tk.END)
-		self.text.insert("1.0", out)
-		self.corrected = out
+			out = re.sub('[\n\t\s]+\.','.',out).rstrip()
+			self.text.delete('1.0', tk.END)
+			self.text.insert("1.0", out)
+			self.corrected = out
 
 	def handle(self,event):
 		self.correct()
@@ -213,18 +215,15 @@ class Algo:
 	def __init__(self,inp,symspell,mutex,e):
 		self.inp = inp
 		self.out = self.inp
+		####### IMPORTANT
 		correct = e.check(self.inp)
 		if not correct:
 			self.correct_word(mutex,symspell,e)
 
 	def correct_word(self,mutex,symspell,e):
-		self.candidates = [x for x,_ in Word(self.inp).spellcheck()]
+		#self.candidates = [x for x,_ in Word(self.inp).spellcheck()]
 		e = e.suggest(self.inp)
-		mutex.acquire()
-		s = symspell.lookup(self.inp,Verbosity.ALL,max_edit_distance=2)
-		mutex.release()
-		self.candidates += e
-		self.candidates += [x.term for x in s]
+		self.candidates = e
 
 		self.options = []
 		for option in self.candidates:
@@ -238,7 +237,7 @@ class Algo:
 		for option in self.options:
 			count = self.options.count(option)
 			done = option in distances[:,0] if init == True else False
-			if count >= 2 and not done:
+			if count >= 1 and not done:
 				dist = -1 * levenshtein_distance(self.inp,option)
 				dist = dist + jaro_distance(self.inp,option)
 				dist = dist * self.options.count(option)
@@ -268,7 +267,7 @@ class Algo:
 							freq = c_freq
 				self.out = win
 			else:
-				self.out = distances[np.argmax(distances,axis=0)[1]][0]
+				self.out = distances[np.argmax(distances,axis=0)[1]][0]#['word']
 		else:
 			self.out = self.inp
 
