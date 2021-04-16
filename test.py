@@ -126,6 +126,7 @@ class DocumentEditor:
 			returns = {}
 			threads = []
 			mutex = Lock()
+			start = time.time()
 			for j in range(0,len(i)):
 				t = Thread(target=self.parse_chunk,args=(i,returns,j,mutex))
 				threads.append(t)
@@ -133,6 +134,8 @@ class DocumentEditor:
 				thread.start()
 			for thread in threads:
 				thread.join()
+			end = time.time()
+			print(end-start)
 			out = ''
 			next = 0
 			sortedKeys = sorted(returns.keys())
@@ -160,10 +163,8 @@ class DocumentEditor:
 					out += words[i] + period + " " + ('\n' * caps[i].count('\n'))
 
 			out = re.sub('[\n\t\s]+\.','.',out).rstrip()
-			mutex.acquire()
 			self.text.delete('1.0', tk.END)
 			self.text.insert("1.0", out)
-			mutex.release()
 			self.corrected = out
 
 class MainMenu:
