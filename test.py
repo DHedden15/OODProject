@@ -173,7 +173,8 @@ class DocumentEditor:
 							w = whitespace[i][1] + w
 					out += w
 
-			out = re.sub('[\n\t\s]+\.','.',out)#.rstrip()
+			#out = re.sub('[\n\t\s]+\.','.',out)#.rstrip()
+			out = out.rstrip()
 			current = self.text.index("current")
 			self.text.mark_set("insert",float(current))
 			self.text.delete('1.0', tk.END)
