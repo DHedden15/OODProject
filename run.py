@@ -72,10 +72,17 @@ class DocumentEditor:
 
 		self.bold_button = tk.Button(self.settingsFrame,text='B',command=self.bold)
 		self.bold_button.grid(row=0,column=2)
-		self.bold_button = tk.Button(self.settingsFrame,text='I',command=self.italic)
-		self.bold_button.grid(row=0,column=3)
-		self.bold_button = tk.Button(self.settingsFrame,text='U',command=self.underline)
-		self.bold_button.grid(row=0,column=4)
+		self.italic_button = tk.Button(self.settingsFrame,text='I',command=self.italic)
+		self.italic_button.grid(row=0,column=3)
+		self.underline_button = tk.Button(self.settingsFrame,text='U',command=self.underline)
+		self.underline_button.grid(row=0,column=4)
+
+		self.left_button = tk.Button(self.settingsFrame,text='L',command=self.left)
+		self.left_button.grid(row=1,column=0)
+		self.center_button = tk.Button(self.settingsFrame,text='C',command=self.center)
+		self.center_button.grid(row=1,column=1)
+		self.right_button = tk.Button(self.settingsFrame,text='R',command=self.right)
+		self.right_button.grid(row=1,column=2)
 
 		self.corrected = ''
 
@@ -110,6 +117,7 @@ class DocumentEditor:
 		fs = self.fontnamevar.get()
 		self.text.tag_configure('format:|fontsize:'+s+"|fontname:"+fs,font=(fs,s))
 		self.text.tag_add('format:|fontsize:'+s+"|fontname:"+fs,'1.0','end')
+		self.text.tag_add('justify:left', '1.0','end')
 
 		self.text.bind('<period>',self.handle)
 		self.text.bind('<Key>',self.update_title)
@@ -130,6 +138,42 @@ class DocumentEditor:
 			i = self.text.get('1.0','end-1c')
 			if i != self.corrected:
 				self.root.title(self.title+" - Unsaved")
+
+	def left(self,args=None):
+		i = self.text.tag_names(f'{tk.SEL_LAST} - 1c')
+		try:
+			justify = [x for x in i if "justify:" in x][0]
+		except:
+			justify = "justify:"
+		orig = justify
+		if "left" not in justify:
+			self.text.tag_remove(orig,'sel.first','sel.last')
+			self.text.tag_config('justify:left', justify="left")
+			self.text.tag_add('justify:left', 'sel.first','sel.last')
+
+	def right(self,args=None):
+		i = self.text.tag_names(f'{tk.SEL_LAST} - 1c')
+		try:
+			justify = [x for x in i if "justify:" in x][0]
+		except:
+			justify = "justify:"
+		orig = justify
+		if "right" not in justify:
+			self.text.tag_remove(orig,'sel.first','sel.last')
+			self.text.tag_config('justify:right', justify="right")
+			self.text.tag_add('justify:right', 'sel.first','sel.last')
+
+	def center(self,args=None):
+		i = self.text.tag_names(f'{tk.SEL_LAST} - 1c')
+		try:
+			justify = [x for x in i if "justify:" in x][0]
+		except:
+			justify = "justify:"
+		orig = justify
+		if "center" not in justify:
+			self.text.tag_remove(orig,'sel.first','sel.last')
+			self.text.tag_config('justify:center', justify="center")
+			self.text.tag_add('justify:center', 'sel.first','sel.last')
 
 	def update_format(self,format,orig,fontsize,fontname,id=0):
 		if id == 1: # For some reason this is the only way I can get the fonts to change.
