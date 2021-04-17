@@ -69,6 +69,7 @@ class DocumentEditor:
 		self.sizeMenu = ttk.Combobox(self.settingsFrame,textvariable=self.fontsizevar)
 		self.sizeMenu['values'] = [str(x) for x in range(1,101)]
 		self.sizeMenu.current(self.fontsize-1)
+		self.last_fontsize = self.fontsize-1
 		self.fontsizevar.trace('w', self.sizechange)
 		self.sizeMenu.grid(row=0,column=1)
 
@@ -109,8 +110,8 @@ class DocumentEditor:
 		self.scrollbar.config(command=self.text.yview)
 		self.text.config(undo=True,yscrollcommand=self.scrollbar.set)
 		s = self.fontsizevar.get()
-		self.text.tag_configure('fontsize'+s,font=(self.fontnamevar.get(),s))
-		self.text.tag_add('fontsize'+s,'1.0','end')
+		self.text.tag_configure('format:|font:'+s,font=(self.fontnamevar.get(),s))
+		self.text.tag_add('format:|font:'+s,'1.0','end')
 
 		self.text.bind('<period>',self.handle)
 		self.text.bind('<Key>',self.update_title)
@@ -122,7 +123,7 @@ class DocumentEditor:
 
 	def fontchange(self,*args):
 		self.fontname = self.fontnamevar.get()
-		self.text.config(font=(self.fontname,self.fontsize))
+		#self.text.config(font=(self.fontname,self.fontsize))
 
 	def update_title(self,key):
 		if (key.keycode not in [104,9,100,88,83,85,80,102,98]):
@@ -132,68 +133,80 @@ class DocumentEditor:
 
 	def update_format(self,format,orig,fontsize):
 		self.text.tag_remove(orig,'sel.first','sel.last')
-		self.text.tag_config(format,font=(self.fontnamevar.get(),int(fontsize),format.replace('format:','')))
-		self.text.tag_add(format,'sel.first','sel.last')
+		self.text.tag_config(format+'|font:'+fontsize,font=(self.fontnamevar.get(),int(fontsize),format.replace('format:','')))
+		self.text.tag_add(format+'|font:'+fontsize,'sel.first','sel.last')
 
 	def bold(self,args=None):
-		i = self.text.tag_names(f'{tk.SEL_LAST} - 1c')
-		f = [x for x in i if 'fontsize' in x][0].replace('fontsize','')
 		try:
-			format = [x for x in i if 'format:' in x][0]
+			i = self.text.tag_names(f'{tk.SEL_LAST} - 1c')
+			try:
+				format = [x for x in i if 'format:' in x][0]
+			except:
+				format = 'format:|font:'+self.fontsizevar.get()
+			orig = format
+			format = orig.split("|")[0]
+			font = orig.split("|")[1]
+			if 'bold' not in format:
+				format = format.replace('normal ','')
+				format += 'bold '
+			else:
+				format = format.replace('bold ','normal ')
+			self.update_format(format,orig,font.replace("font:",''))
 		except:
-			format = 'format:'
-		orig = format
-		if 'bold' not in format:
-			format = format.replace('normal ','')
-			format += 'bold '
-		else:
-			format = format.replace('bold ','normal ')
-		self.update_format(format,orig,f)
+			pass
 
 	def italic(self,args=None):
-		i = self.text.tag_names(f'{tk.SEL_LAST} - 1c')
-		f = [x for x in i if 'fontsize' in x][0].replace('fontsize','')
 		try:
-			format = [x for x in i if 'format:' in x][0]
+			i = self.text.tag_names(f'{tk.SEL_LAST} - 1c')
+			try:
+				format = [x for x in i if 'format:' in x][0]
+			except:
+				format = 'format:|font:'+self.fontsizevar.get()
+			orig = format
+			format = orig.split("|")[0]
+			font = orig.split("|")[1]
+			if 'italic' not in format:
+				format += 'italic '
+			else:
+				format = format.replace('italic ','')
+			self.update_format(format,orig,font.replace("font:",''))
 		except:
-			format = 'format:'
-		orig = format
-		if 'italic' not in format:
-			format += 'italic '
-		else:
-			format = format.replace('italic ','')
-		self.update_format(format,orig,f)
+			pass
 
 	def underline(self,args=None):
-		i = self.text.tag_names(f'{tk.SEL_LAST} - 1c')
-		f = [x for x in i if 'fontsize' in x][0].replace('fontsize','')
 		try:
-			format = [x for x in i if 'format:' in x][0]
+			i = self.text.tag_names(f'{tk.SEL_LAST} - 1c')
+			try:
+				format = [x for x in i if 'format:' in x][0]
+			except:
+				format = 'format:|font:'+self.fontsizevar.get()
+			orig = format
+			format = orig.split("|")[0]
+			font = orig.split("|")[1]
+			if 'underline' not in format:
+				format += 'underline '
+			else:
+				format = format.replace('underline ','')
+			self.update_format(format,orig,font.replace("font:",''))
 		except:
-			format = 'format:'
-		orig = format
-		if 'underline' not in format:
-			format += 'underline '
-		else:
-			format = format.replace('underline ','')
-		self.update_format(format,orig,f)
+			pass
 
 	def size(self,args=None):
-		i = self.text.tag_names(f'{tk.SEL_LAST} - 1c')
-		tag = self.fontsizevar.get()
-		try:
-			format = [x for x in i if 'format:' in x][0]
-		except:
-			format = 'format:'
-		if tag not in i:
-			for t in i:
-				if 'fontsize' in t:
-					self.text.tag_remove(t,'sel.first','sel.last')
-					self.text.tag_configure('fontsize'+tag,font=(self.fontnamevar.get(),tag))
-					self.text.tag_add('fontsize'+tag,'sel.first','sel.last')
-					self.text.tag_remove(format,'sel.first','sel.last')
-					self.text.tag_config(format,font=(self.fontnamevar.get(),int(tag),format.replace('format:','')))
-					self.text.tag_add(format,'sel.first','sel.last')
+		if self.fontsizevar.get() != self.last_fontsize:
+			try:
+				i = self.text.tag_names(f'{tk.SEL_LAST} - 1c')
+				try:
+					format = [x for x in i if 'format:' in x][0]
+				except:
+					format = 'format:|font:'+self.fontsizevar.get()
+				orig = format
+				format = orig.split('|')[0]
+				font = self.fontsizevar.get()
+				self.update_format(format,orig,font)
+				self.last_fontsize = font
+			except:
+				self.sizeMenu.current(self.last_fontsize)
+				pass
 
 	def close(self):
 		if (messagebox.askquestion(title="Save", message="Save file?") != 'no'):
