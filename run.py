@@ -23,7 +23,7 @@ import tkinter.messagebox as messagebox
 class DocumentEditor:
 	def __init__(self, root, content='',title='New Document',filename=False):
 
-		self.fonts = font.families()#["Times New Roman", "Arial", "Times", "Helvetica", "Courier", "Georgia"]
+		self.fonts = ["Times New Roman", "Arial", "Times", "Helvetica", "Courier", "Georgia"]
 
 		self.filename = filename
 		self.root = root
@@ -67,7 +67,6 @@ class DocumentEditor:
 		self.sizeMenu = ttk.Combobox(self.settingsFrame,textvariable=self.fontsizevar)
 		self.sizeMenu['values'] = [str(x) for x in range(1,101)]
 		self.sizeMenu.current(self.fontsize-1)
-		self.last_fontsize = self.fontsize-1
 		self.fontsizevar.trace('w', self.sizechange)
 		self.sizeMenu.grid(row=0,column=1)
 
@@ -108,8 +107,9 @@ class DocumentEditor:
 		self.scrollbar.config(command=self.text.yview)
 		self.text.config(undo=True,yscrollcommand=self.scrollbar.set)
 		s = self.fontsizevar.get()
-		self.text.tag_configure('format:|fontsize:'+s,font=(self.fontnamevar.get(),s))
-		self.text.tag_add('format:|fontsize:'+s,'1.0','end')
+		fs = self.fontnamevar.get()
+		self.text.tag_configure('format:|fontsize:'+s+"|fontname:"+fs,font=(fs,s))
+		self.text.tag_add('format:|fontsize:'+s+"|fontname:"+fs,'1.0','end')
 
 		self.text.bind('<period>',self.handle)
 		self.text.bind('<Key>',self.update_title)
@@ -120,8 +120,7 @@ class DocumentEditor:
 		self.size(self)
 
 	def fontchange(self,*args):
-		self.fontname = self.fontnamevar.get()
-		#self.text.config(font=(self.fontname,self.fontsize))
+		self.font(self)
 
 	def update_title(self,key):
 		if key == 'update':
@@ -132,10 +131,13 @@ class DocumentEditor:
 			if i != self.corrected:
 				self.root.title(self.title+" - Unsaved")
 
-	def update_format(self,format,orig,fontsize):
+	def update_format(self,format,orig,fontsize,fontname,id=0):
+		if id == 1: # For some reason this is the only way I can get the fonts to change.
+			fontname = self.fontnamevar.get()
 		self.text.tag_remove(orig,'sel.first','sel.last')
-		self.text.tag_config(format+'|fontsize:'+fontsize,font=(self.fontnamevar.get(),int(fontsize),format.replace('format:','')))
-		self.text.tag_add(format+'|fontsize:'+fontsize,'sel.first','sel.last')
+		tag = format+"|fontsize:"+fontsize+"|fontname:"+fontname
+		self.text.tag_config(tag,font=(fontname,int(fontsize),format.replace('format:','')))
+		self.text.tag_add(tag,'sel.first','sel.last')
 		self.update_title(key='update')
 
 	def bold(self,args=None):
@@ -144,16 +146,17 @@ class DocumentEditor:
 			try:
 				format = [x for x in i if 'format:' in x][0]
 			except:
-				format = 'format:|fontsize:'+self.fontsizevar.get()
+				format = 'format:|fontsize:'+self.fontsizevar.get()+'|fontname:'+self.fontnamevar.get()
 			orig = format
 			format = orig.split("|")[0]
-			font = orig.split("|")[1]
+			fontsize = orig.split("|")[1].replace("fontsize:","")
+			fontname = orig.split("|")[2].replace("fontname:","")
 			if 'bold' not in format:
 				format = format.replace('normal ','')
 				format += 'bold '
 			else:
 				format = format.replace('bold ','normal ')
-			self.update_format(format,orig,font.replace("fontsize:",''))
+			self.update_format(format,orig,fontsize,fontname)
 		except:
 			pass
 
@@ -163,15 +166,16 @@ class DocumentEditor:
 			try:
 				format = [x for x in i if 'format:' in x][0]
 			except:
-				format = 'format:|fontsize:'+self.fontsizevar.get()
+				format = 'format:|fontsize:'+self.fontsizevar.get()+'|fontname:'+self.fontnamevar.get()
 			orig = format
 			format = orig.split("|")[0]
-			font = orig.split("|")[1]
+			fontsize = orig.split("|")[1].replace("fontsize:","")
+			fontname = orig.split("|")[2].replace("fontname:","")
 			if 'italic' not in format:
 				format += 'italic '
 			else:
 				format = format.replace('italic ','')
-			self.update_format(format,orig,font.replace("fontsize:",''))
+			self.update_format(format,orig,fontsize,fontname)
 		except:
 			pass
 
@@ -181,33 +185,51 @@ class DocumentEditor:
 			try:
 				format = [x for x in i if 'format:' in x][0]
 			except:
-				format = 'format:|fontsize:'+self.fontsizevar.get()
+				format = 'format:|fontsize:'+self.fontsizevar.get()+'|fontname:'+self.fontnamevar.get()
 			orig = format
 			format = orig.split("|")[0]
-			font = orig.split("|")[1]
+			fontsize = orig.split("|")[1].replace("fontsize:","")
+			fontname = orig.split("|")[2].replace("fontname:","")
 			if 'underline' not in format:
 				format += 'underline '
 			else:
 				format = format.replace('underline ','')
-			self.update_format(format,orig,font.replace("fontsize:",''))
+			self.update_format(format,orig,fontsize,fontname)
 		except:
 			pass
 
-	def size(self,args=None):
-		if self.fontsizevar.get() != self.last_fontsize:
+	def size(self,*args):
+		if self.fontsizevar.get() != self.fontsize:
 			try:
 				i = self.text.tag_names(f'{tk.SEL_LAST} - 1c')
 				try:
 					format = [x for x in i if 'format:' in x][0]
 				except:
-					format = 'format:|fontsize:'+self.fontsizevar.get()
+					format = 'format:|fontsize:'+self.fontsizevar.get()+'|fontname:'+self.fontnamevar.get()
 				orig = format
 				format = orig.split('|')[0]
-				font = self.fontsizevar.get()
-				self.update_format(format,orig,font)
-				self.last_fontsize = font
+				fontsize = self.fontsizevar.get()
+				fontname = orig.split('|')[2].replace("fontname:","")
+				self.update_format(format,orig,fontsize,fontname)
+				self.fontsize = fontsize
 			except:
-				self.sizeMenu.current(self.last_fontsize)
+				pass
+
+	def font(self,*args):
+		if (self.fontnamevar.get() != self.fontname):
+			try:
+				i = self.text.tag_names(f'{tk.SEL_LAST} - 1c')
+				try:
+					format = [x for x in i if 'format:' in x][0]
+				except:
+					format = 'format:|fontsize:'+self.fontsizevar.get()+'|fontname:'+self.fontnamevar.get()
+				orig = format
+				format = orig.split('|')[0]
+				fontsize = orig.split('|')[1].replace("fontsize:","")
+				fontname = ''
+				self.update_format(format,orig,fontsize,font,1)
+				self.fontname = fontname
+			except:
 				pass
 
 	def close(self):
