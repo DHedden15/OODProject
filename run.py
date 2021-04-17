@@ -21,8 +21,11 @@ import math
 import tkinter.messagebox as messagebox
 
 class DocumentEditor:
-	def __init__(self, root, content=''):
+	def __init__(self, root, content='',title='New Document',filename=False):
+		self.filename = filename
 		self.root = root
+		self.title = title
+		self.root.title(self.title)
 		self.frame = tk.Frame(self.root, height=500,width=500)
 		self.root.protocol("WM_DELETE_WINDOW", self.close)
 		self.frame.grid_propagate(False)
@@ -37,7 +40,7 @@ class DocumentEditor:
 		self.scrollbar = tk.Scrollbar(self.frame)
 		self.scrollbar.grid(row=2,column=1,sticky='NSEW')
 
-		menubar = tk.Menu(self.root)
+		menubar = tk.Menu(self.frame)
 		self.root.config(menu=menubar)
 
 		fileMenu = tk.Menu(menubar)
@@ -68,7 +71,9 @@ class DocumentEditor:
 		self.root.bind("<Command-n>",self.new_m)
 		fileMenu.add_command(label="Open", command=self.open,accelerator="Cmd+O")
 		self.root.bind("<Command-o>",self.open_m)
-		fileMenu.add_command(label="Save as...",command=self.save,accelerator="Cmd+S")
+		fileMenu.add_command(label="Save as...",command=self.save_as,accelerator="Cmd+Shift+S")
+		self.root.bind("<Command-Shift-s>",self.save_as)
+		fileMenu.add_command(label="Save...",command=self.save_as,accelerator="Cmd+S")
 		self.root.bind("<Command-s>",self.save)
 		fileMenu.add_command(label="Correct Spelling...",command=self.handle,accelerator="Cmd+G")
 		self.root.bind("<Command-g>", self.handle)
@@ -81,6 +86,7 @@ class DocumentEditor:
 		self.text.config(font=self.font,undo=True,yscrollcommand=self.scrollbar.set)
 
 		self.text.bind('<period>',self.handle)
+		self.text.bind('<Key>',self.update_title)
 		self.frame.pack(fill='both',expand=True)
 		self.frame.pack_propagate(0)
 
@@ -90,8 +96,15 @@ class DocumentEditor:
 	def fontchange(self,*args):
 		self.font.config(family=self.fontvariable.get())
 
+	def update_title(self,key):
+		if (key.keycode not in [104,9,100,88,83,85,80,102,98]):
+			i = self.text.get('1.0','end-1c')
+			if i != self.corrected:
+				self.root.title(self.title+" - Unsaved")
+
 	def new_m(self,args):
 		self.new()
+
 	def open_m(self,args):
 		self.open()
 
@@ -104,10 +117,9 @@ class DocumentEditor:
 	def menu(self):
 		self.app = MainMenu(tk.Tk())
 
-	def new(self,content='',title='New Document'):
+	def new(self,content='',title='New Document',filename=False):
 		self.newWindow = tk.Tk()
-		self.newWindow.title(title)
-		self.app = DocumentEditor(self.newWindow,content)
+		self.app = DocumentEditor(self.newWindow,content,title,filename)
 
 	def open(self):
 		filename = filedialog.askopenfilename()
@@ -116,9 +128,19 @@ class DocumentEditor:
 		f = open(filename,'r')
 		i = f.read()
 		f.close()
-		self.new(i,filename.split('.')[0])
+		self.new(i,filename.split('.')[0].split('/')[-1:][0],filename=filename)
 
-	def save(self, args):
+	def save(self,args):
+		if self.filename == False:
+			self.save_as(self)
+		else:
+			i = self.text.get("1.0","end-1c")
+			f = open(self.filename,'w')
+			f.write(i)
+			f.close()
+			self.root.title(self.title)
+
+	def save_as(self, args):
 		i = self.text.get("1.0","end-1c")
 		filename = filedialog.asksaveasfilename(initialdir = "./",title = "Select file",filetypes = (("PhonetikWrite files","*.pwf"),("all files","*.*")))
 		if filename == '':
@@ -126,6 +148,9 @@ class DocumentEditor:
 		f = open(filename,'w')
 		f.write(i)
 		f.close()
+		self.filename = filename
+		self.title = self.filename.split('.')[0].split('/')[-1:][0]
+		self.root.title(self.title)
 
 	def parse_chunk(self,i,returns,j,mutex):
 		# Chunk is array of 100 word strings.
@@ -157,7 +182,6 @@ class DocumentEditor:
 
 	def correct(self):
 		pos = self.text.index(tk.INSERT)
-		print(pos)
 		original = self.text.get("1.0","end-1c")
 		orig = deepcopy(original)
 		if orig != self.corrected:
@@ -241,11 +265,9 @@ class MainMenu:
 	def open_m(self,args):
 		self.open()
 
-	def new(self,content='',title='New Document'):
+	def new(self,content='',title='New Document',filename=False):
 		self.newWindow = tk.Tk()
-		self.newWindow.title(title)
-		self.app = DocumentEditor(self.newWindow,content)
-		self.root.withdraw()
+		self.app = DocumentEditor(self.newWindow,content,title,filename)
 
 	def open(self):
 		filename = filedialog.askopenfilename()
@@ -254,7 +276,7 @@ class MainMenu:
 		f = open(filename,'r')
 		i = f.read()
 		f.close()
-		self.new(i,filename.split('.')[0])
+		self.new(i,filename.split('.')[0].split('/')[-1:][0],filename=filename)
 
 	def run(self):
 		self.root.mainloop()
