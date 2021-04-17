@@ -68,8 +68,10 @@ class DocumentEditor:
 		self.root.bind("<Command-n>",self.new_m)
 		fileMenu.add_command(label="Open", command=self.open,accelerator="Cmd+O")
 		self.root.bind("<Command-o>",self.open_m)
-		fileMenu.add_command(label="Save as...",command=self.save)
+		fileMenu.add_command(label="Save as...",command=self.save,accelerator="Cmd+S")
+		root.bind("<Command-s>",self.save)
 		fileMenu.add_command(label="Correct Spelling...",command=self.handle,accelerator="Cmd+G")
+		root.bind("<Command-g>", self.handle)
 		fileMenu.add_command(label="Main Menu",command=self.menu)
 
 		self.text = tk.Text(self.frame,borderwidth=3)
@@ -116,7 +118,7 @@ class DocumentEditor:
 		f.close()
 		self.new(i,filename.split('.')[0])
 
-	def save(self):
+	def save(self, args):
 		i = self.text.get("1.0","end-1c")
 		filename = filedialog.asksaveasfilename(initialdir = "./",title = "Select file",filetypes = (("PhonetikWrite files","*.pwf"),("all files","*.*")))
 		if filename == '':
@@ -202,7 +204,8 @@ class DocumentEditor:
 							w = whitespace[i][1] + w
 					out += w
 
-			out = re.sub('[\n\t\s]+\.','.',out)#.rstrip()
+			#out = re.sub('[\n\t\s]+\.','.',out)#.rstrip()
+			out = out.rstrip()
 			current = self.text.index("current")
 			self.text.mark_set("insert",float(current))
 			self.text.delete('1.0', tk.END)
