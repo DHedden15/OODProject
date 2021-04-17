@@ -1,4 +1,3 @@
-#!/Users/will/.pyenv/shims/python3
 import tkinter as tk
 from tkinter import filedialog, font
 from tkinter.font import Font
@@ -19,11 +18,13 @@ import re
 from copy import deepcopy
 from wordfreq import word_frequency
 import math
+import tkinter.messagebox as messagebox
 
 class DocumentEditor:
 	def __init__(self, root, content=''):
 		self.root = root
 		self.frame = tk.Frame(self.root, height=500,width=500)
+		self.root.protocol("WM_DELETE_WINDOW", self.close)
 		self.frame.grid_propagate(False)
 
 		self.font = Font(family='Times New Roman',size=20)
@@ -63,6 +64,10 @@ class DocumentEditor:
 		self.line = ttk.Separator(self.frame,orient=tk.HORIZONTAL)
 		self.line.grid(row=1,column=0,sticky='EW')
 
+		fileMenu.add_command(label="New", command=self.new,accelerator="Cmd+N")
+		self.root.bind("<Command-n>",self.new_m)
+		fileMenu.add_command(label="Open", command=self.open,accelerator="Cmd+O")
+		self.root.bind("<Command-o>",self.open_m)
 		fileMenu.add_command(label="Save as...",command=self.save,accelerator="Cmd+S")
 		root.bind("<Command-s>",self.save)
 		fileMenu.add_command(label="Correct Spelling...",command=self.handle,accelerator="Cmd+G")
@@ -85,9 +90,33 @@ class DocumentEditor:
 	def fontchange(self,*args):
 		self.font.config(family=self.fontvariable.get())
 
+	def new_m(self,args):
+		self.new()
+	def open_m(self,args):
+		self.open()
+
+	def close(self):
+		if (messagebox.askquestion(title="Save", message="Save file?") != 'no'):
+			self.save()
+		self.menu()
+		self.root.destroy()
+
 	def menu(self):
-		self.newWindow = tk.Toplevel(self.root)
-		self.app = MainMenu(self.newWindow)
+		self.app = MainMenu(tk.Tk())
+
+	def new(self,content='',title='New Document'):
+		self.newWindow = tk.Tk()
+		self.newWindow.title(title)
+		self.app = DocumentEditor(self.newWindow,content)
+
+	def open(self):
+		filename = filedialog.askopenfilename()
+		if filename == '':
+			return None
+		f = open(filename,'r')
+		i = f.read()
+		f.close()
+		self.new(i,filename.split('.')[0])
 
 	def save(self, args):
 		i = self.text.get("1.0","end-1c")
@@ -187,6 +216,7 @@ class MainMenu:
 	def __init__(self,root):
 		self.root = root
 		self.root.title("PhonetikWrite")
+		self.root.geometry('200x200')
 
 		new_button = tk.Button(self.root, text="New Document", command=self.new)
 		new_button.pack()
@@ -194,9 +224,24 @@ class MainMenu:
 		open_button = tk.Button(self.root, text="Open Document", command=self.open)
 		open_button.pack()
 
+		menubar = tk.Menu(self.root)
+		filemenu = tk.Menu(menubar, tearoff=0)
+		filemenu.add_command(label="New", command=self.new,accelerator="Cmd+N")
+		self.root.bind("<Command-n>",self.new_m)
+		filemenu.add_command(label="Open", command=self.open,accelerator="Cmd+O")
+		self.root.bind("<Command-o>",self.open_m)
+		menubar.add_cascade(label='File',menu=filemenu)
+
+		self.root.config(menu=menubar)
+
+	def new_m(self,args):
+		self.new()
+	def open_m(self,args):
+		self.open()
+
 	def new(self,content='',title='New Document'):
-		self.newWindow = tk.Toplevel(self.root)
-		self.newWindow.title = title
+		self.newWindow = tk.Tk()
+		self.newWindow.title(title)
 		self.app = DocumentEditor(self.newWindow,content)
 		self.root.withdraw()
 
@@ -260,9 +305,6 @@ class Algo:
 		arr = exp(arr.astype(float))
 		arr = arr / arr.sum()
 		return arr
-
-root = tk.Tk()
-
-gui = MainMenu(root)
+gui = MainMenu(tk.Tk())
 
 gui.run()
