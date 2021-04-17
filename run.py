@@ -22,6 +22,9 @@ import tkinter.messagebox as messagebox
 
 class DocumentEditor:
 	def __init__(self, root, content='',title='New Document',filename=False):
+
+		self.fonts = ["Times New Roman", "Arial", "Times", "Helvetica", "Courier", "Georgia"]
+
 		self.filename = filename
 		self.root = root
 		self.title = title
@@ -30,7 +33,10 @@ class DocumentEditor:
 		self.root.protocol("WM_DELETE_WINDOW", self.close)
 		self.frame.grid_propagate(False)
 
-		self.font = Font(family='Times New Roman',size=20)
+		self.fontname = 'Times New Roman'
+		self.bold_italic_underline = [0,0,0] # set to 1 [b,i,u] for the corresponding
+		self.fontsize = 20
+		self.font_objs = [Font(family=x,size=self.fontsize) for x in self.fonts]
 
 		self.frame.grid_rowconfigure(0,weight=0)
 		self.frame.grid_rowconfigure(1,weight=0)
@@ -48,19 +54,26 @@ class DocumentEditor:
 
 		self.settingsFrame = tk.Frame(self.frame)
 		self.settingsFrame.grid(row=0,column=0,sticky='E')
-		fonts = font.families()
 		self.fontvariable = tk.StringVar(self.frame)
-		self.fontvariable.set('Times New Roman')
+		self.fontvariable.set(self.fontname)
 		self.fontvariable.trace('w',self.fontchange)
-		self.fontMenu = tk.OptionMenu(self.settingsFrame,self.fontvariable,*fonts)
+		self.fontMenu = tk.OptionMenu(self.settingsFrame,self.fontvariable,*self.fonts)
 		self.fontMenu.grid(row=0,column=0)
 
 		sizes = range(1,101)
-		self.fontsize = tk.IntVar(self.frame)
-		self.fontsize.set(50)
-		self.fontsize.trace('w', self.sizechange)
-		self.sizeMenu = tk.OptionMenu(self.settingsFrame,self.fontsize,*sizes)
+		self.fontsizevar = tk.StringVar(self.frame)
+		self.fontsizevar.set(self.fontsize)
+		self.fontsizevar.trace('w', self.sizechange)
+		self.sizeMenu = ttk.Combobox(self.settingsFrame,textvariable=self.fontsizevar)
+		self.sizeMenu['values'] = [str(x) for x in range(1,101)]
 		self.sizeMenu.grid(row=0,column=1)
+
+		self.bold_button = tk.Button(self.settingsFrame,text='B',command=self.bold)
+		self.bold_button.grid(row=0,column=2)
+		self.bold_button = tk.Button(self.settingsFrame,text='I',command=self.italic)
+		self.bold_button.grid(row=0,column=3)
+		self.bold_button = tk.Button(self.settingsFrame,text='U',command=self.underline)
+		self.bold_button.grid(row=0,column=4)
 
 		self.corrected = ''
 
@@ -83,24 +96,51 @@ class DocumentEditor:
 		self.text.insert("1.0",content)
 		self.text.grid(row=2,column=0,sticky='NSEW')
 		self.scrollbar.config(command=self.text.yview)
-		self.text.config(font=self.font,undo=True,yscrollcommand=self.scrollbar.set)
+		self.text.config(font=(self.fontname,self.fontsize),undo=True,yscrollcommand=self.scrollbar.set)
 
 		self.text.bind('<period>',self.handle)
 		self.text.bind('<Key>',self.update_title)
 		self.frame.pack(fill='both',expand=True)
 		self.frame.pack_propagate(0)
+		self.sizeMenu.current(self.fontsize)
 
 	def sizechange(self,*args):
-		self.font.config(size=self.fontsize.get())
+		self.fontsize = self.fontsizevar.get()
+		self.text.config(font=(self.fontname,self.fontsize))
 
 	def fontchange(self,*args):
-		self.font.config(family=self.fontvariable.get())
+		self.fontname = self.fontvariable.get()
+		self.text.config(font=(self.fontname,self.fontsize))
 
 	def update_title(self,key):
 		if (key.keycode not in [104,9,100,88,83,85,80,102,98]):
 			i = self.text.get('1.0','end-1c')
 			if i != self.corrected:
 				self.root.title(self.title+" - Unsaved")
+
+	def bold(self):
+		i = self.text.tag_names(f'{tk.SEL_LAST} - 1c')
+		if ('bold' not in i):
+			self.text.tag_configure('bold',font=(self.fontname,self.fontsize,'bold',))
+			self.text.tag_add('bold','sel.first','sel.last')
+		else:
+			self.text.tag_remove('bold','sel.first','sel.last')
+
+	def italic(self):
+		i = self.text.tag_names(f'{tk.SEL_LAST} - 1c')
+		if ('italic' not in i):
+			self.text.tag_configure('italic',font=(self.fontname,self.fontsize,'italic'))
+			self.text.tag_add('italic','sel.first','sel.last')
+		else:
+			self.text.tag_remove('italic','sel.first','sel.last')
+
+	def underline(self):
+		i = self.text.tag_names(f'{tk.SEL_LAST} - 1c')
+		if ('underline' not in i):
+			self.text.tag_configure('underline',font=(self.fontname,self.fontsize,'underline'))
+			self.text.tag_add('underline','sel.first','sel.last')
+		else:
+			self.text.tag_remove('underline','sel.first','sel.last')
 
 	def new_m(self,args):
 		self.new()
@@ -242,7 +282,7 @@ class MainMenu:
 	def __init__(self,root):
 		self.root = root
 		self.root.title("PhonetikWrite")
-		self.root.geometry('200x200')
+		self.root.geometry('250x100')
 
 		new_button = tk.Button(self.root, text="New Document", command=self.new)
 		new_button.pack()
