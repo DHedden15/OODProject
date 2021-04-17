@@ -52,20 +52,24 @@ class DocumentEditor:
 		fileMenu = tk.Menu(menubar)
 		menubar.add_cascade(label="File",menu=fileMenu)
 
+		editMenu = tk.Menu(menubar)
+		menubar.add_cascade(label="Edit",menu=editMenu)
+
 		self.settingsFrame = tk.Frame(self.frame)
 		self.settingsFrame.grid(row=0,column=0,sticky='E')
-		self.fontvariable = tk.StringVar(self.frame)
-		self.fontvariable.set(self.fontname)
-		self.fontvariable.trace('w',self.fontchange)
-		self.fontMenu = tk.OptionMenu(self.settingsFrame,self.fontvariable,*self.fonts)
+		self.fontnamevar = tk.StringVar(self.frame)
+		self.fontnamevar.set(self.fontname)
+		self.fontnamevar.trace('w',self.fontchange)
+		self.fontMenu = tk.OptionMenu(self.settingsFrame,self.fontnamevar,*self.fonts)
 		self.fontMenu.grid(row=0,column=0)
 
 		sizes = range(1,101)
 		self.fontsizevar = tk.StringVar(self.frame)
 		self.fontsizevar.set(self.fontsize)
-		self.fontsizevar.trace('w', self.sizechange)
 		self.sizeMenu = ttk.Combobox(self.settingsFrame,textvariable=self.fontsizevar)
 		self.sizeMenu['values'] = [str(x) for x in range(1,101)]
+		self.sizeMenu.current(self.fontsize-1)
+		self.fontsizevar.trace('w', self.sizechange)
 		self.sizeMenu.grid(row=0,column=1)
 
 		self.bold_button = tk.Button(self.settingsFrame,text='B',command=self.bold)
@@ -81,9 +85,9 @@ class DocumentEditor:
 		self.line.grid(row=1,column=0,sticky='EW')
 
 		fileMenu.add_command(label="New", command=self.new,accelerator="Cmd+N")
-		self.root.bind("<Command-n>",self.new_m)
+		self.root.bind("<Command-n>",self.new)
 		fileMenu.add_command(label="Open", command=self.open,accelerator="Cmd+O")
-		self.root.bind("<Command-o>",self.open_m)
+		self.root.bind("<Command-o>",self.open)
 		fileMenu.add_command(label="Save as...",command=self.save_as,accelerator="Cmd+Shift+S")
 		self.root.bind("<Command-Shift-s>",self.save_as)
 		fileMenu.add_command(label="Save...",command=self.save_as,accelerator="Cmd+S")
@@ -92,24 +96,32 @@ class DocumentEditor:
 		self.root.bind("<Command-g>", self.handle)
 		fileMenu.add_command(label="Main Menu",command=self.menu)
 
+		editMenu.add_command(label="Bold",command=self.handle,accelerator="Cmd+B")
+		self.root.bind("<Command-b>", self.bold)
+		editMenu.add_command(label="Italic",command=self.handle,accelerator="Cmd+I")
+		self.root.bind("<Command-i>", self.italic)
+		editMenu.add_command(label="Underline",command=self.handle,accelerator="Cmd+U")
+		self.root.bind("<Command-u>", self.underline)
+
 		self.text = tk.Text(self.frame,borderwidth=3)
 		self.text.insert("1.0",content)
 		self.text.grid(row=2,column=0,sticky='NSEW')
 		self.scrollbar.config(command=self.text.yview)
-		self.text.config(font=(self.fontname,self.fontsize),undo=True,yscrollcommand=self.scrollbar.set)
+		self.text.config(undo=True,yscrollcommand=self.scrollbar.set)
+		s = self.fontsizevar.get()
+		self.text.tag_configure('fontsize'+s,font=(self.fontnamevar.get(),s))
+		self.text.tag_add('fontsize'+s,'1.0','end')
 
 		self.text.bind('<period>',self.handle)
 		self.text.bind('<Key>',self.update_title)
 		self.frame.pack(fill='both',expand=True)
 		self.frame.pack_propagate(0)
-		self.sizeMenu.current(self.fontsize)
 
 	def sizechange(self,*args):
-		self.fontsize = self.fontsizevar.get()
-		self.text.config(font=(self.fontname,self.fontsize))
+		self.size(self)
 
 	def fontchange(self,*args):
-		self.fontname = self.fontvariable.get()
+		self.fontname = self.fontnamevar.get()
 		self.text.config(font=(self.fontname,self.fontsize))
 
 	def update_title(self,key):
@@ -118,35 +130,70 @@ class DocumentEditor:
 			if i != self.corrected:
 				self.root.title(self.title+" - Unsaved")
 
-	def bold(self):
+	def update_format(self,format,orig,fontsize):
+		self.text.tag_remove(orig,'sel.first','sel.last')
+		self.text.tag_config(format,font=(self.fontnamevar.get(),int(fontsize),format.replace('format:','')))
+		self.text.tag_add(format,'sel.first','sel.last')
+
+	def bold(self,args=None):
 		i = self.text.tag_names(f'{tk.SEL_LAST} - 1c')
-		if ('bold' not in i):
-			self.text.tag_configure('bold',font=(self.fontname,self.fontsize,'bold',))
-			self.text.tag_add('bold','sel.first','sel.last')
+		f = [x for x in i if 'fontsize' in x][0].replace('fontsize','')
+		try:
+			format = [x for x in i if 'format:' in x][0]
+		except:
+			format = 'format:'
+		orig = format
+		if 'bold' not in format:
+			format = format.replace('normal ','')
+			format += 'bold '
 		else:
-			self.text.tag_remove('bold','sel.first','sel.last')
+			format = format.replace('bold ','normal ')
+		self.update_format(format,orig,f)
 
-	def italic(self):
+	def italic(self,args=None):
 		i = self.text.tag_names(f'{tk.SEL_LAST} - 1c')
-		if ('italic' not in i):
-			self.text.tag_configure('italic',font=(self.fontname,self.fontsize,'italic'))
-			self.text.tag_add('italic','sel.first','sel.last')
+		f = [x for x in i if 'fontsize' in x][0].replace('fontsize','')
+		try:
+			format = [x for x in i if 'format:' in x][0]
+		except:
+			format = 'format:'
+		orig = format
+		if 'italic' not in format:
+			format += 'italic '
 		else:
-			self.text.tag_remove('italic','sel.first','sel.last')
+			format = format.replace('italic ','')
+		self.update_format(format,orig,f)
 
-	def underline(self):
+	def underline(self,args=None):
 		i = self.text.tag_names(f'{tk.SEL_LAST} - 1c')
-		if ('underline' not in i):
-			self.text.tag_configure('underline',font=(self.fontname,self.fontsize,'underline'))
-			self.text.tag_add('underline','sel.first','sel.last')
+		f = [x for x in i if 'fontsize' in x][0].replace('fontsize','')
+		try:
+			format = [x for x in i if 'format:' in x][0]
+		except:
+			format = 'format:'
+		orig = format
+		if 'underline' not in format:
+			format += 'underline '
 		else:
-			self.text.tag_remove('underline','sel.first','sel.last')
+			format = format.replace('underline ','')
+		self.update_format(format,orig,f)
 
-	def new_m(self,args):
-		self.new()
-
-	def open_m(self,args):
-		self.open()
+	def size(self,args=None):
+		i = self.text.tag_names(f'{tk.SEL_LAST} - 1c')
+		tag = self.fontsizevar.get()
+		try:
+			format = [x for x in i if 'format:' in x][0]
+		except:
+			format = 'format:'
+		if tag not in i:
+			for t in i:
+				if 'fontsize' in t:
+					self.text.tag_remove(t,'sel.first','sel.last')
+					self.text.tag_configure('fontsize'+tag,font=(self.fontnamevar.get(),tag))
+					self.text.tag_add('fontsize'+tag,'sel.first','sel.last')
+					self.text.tag_remove(format,'sel.first','sel.last')
+					self.text.tag_config(format,font=(self.fontnamevar.get(),int(tag),format.replace('format:','')))
+					self.text.tag_add(format,'sel.first','sel.last')
 
 	def close(self):
 		if (messagebox.askquestion(title="Save", message="Save file?") != 'no'):
@@ -157,11 +204,16 @@ class DocumentEditor:
 	def menu(self):
 		self.app = MainMenu(tk.Tk())
 
-	def new(self,content='',title='New Document',filename=False):
+	def new(self,content='',title='New Document',filename=False,args=None):
+		try:
+			a = content.keycode
+			content = ''
+		except:
+			content = content
 		self.newWindow = tk.Tk()
 		self.app = DocumentEditor(self.newWindow,content,title,filename)
 
-	def open(self):
+	def open(self,args=None):
 		filename = filedialog.askopenfilename()
 		if filename == '':
 			return None
@@ -170,7 +222,7 @@ class DocumentEditor:
 		f.close()
 		self.new(i,filename.split('.')[0].split('/')[-1:][0],filename=filename)
 
-	def save(self,args):
+	def save(self,args=None):
 		if self.filename == False:
 			self.save_as(self)
 		else:
