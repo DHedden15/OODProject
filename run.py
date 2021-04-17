@@ -23,7 +23,7 @@ import tkinter.messagebox as messagebox
 class DocumentEditor:
 	def __init__(self, root, content='',title='New Document',filename=False):
 
-		self.fonts = ["Times New Roman", "Arial", "Times", "Helvetica", "Courier", "Georgia"]
+		self.fonts = font.families()#["Times New Roman", "Arial", "Times", "Helvetica", "Courier", "Georgia"]
 
 		self.filename = filename
 		self.root = root
@@ -34,9 +34,7 @@ class DocumentEditor:
 		self.frame.grid_propagate(False)
 
 		self.fontname = 'Times New Roman'
-		self.bold_italic_underline = [0,0,0] # set to 1 [b,i,u] for the corresponding
 		self.fontsize = 20
-		self.font_objs = [Font(family=x,size=self.fontsize) for x in self.fonts]
 
 		self.frame.grid_rowconfigure(0,weight=0)
 		self.frame.grid_rowconfigure(1,weight=0)
@@ -110,8 +108,8 @@ class DocumentEditor:
 		self.scrollbar.config(command=self.text.yview)
 		self.text.config(undo=True,yscrollcommand=self.scrollbar.set)
 		s = self.fontsizevar.get()
-		self.text.tag_configure('format:|font:'+s,font=(self.fontnamevar.get(),s))
-		self.text.tag_add('format:|font:'+s,'1.0','end')
+		self.text.tag_configure('format:|fontsize:'+s,font=(self.fontnamevar.get(),s))
+		self.text.tag_add('format:|fontsize:'+s,'1.0','end')
 
 		self.text.bind('<period>',self.handle)
 		self.text.bind('<Key>',self.update_title)
@@ -126,6 +124,9 @@ class DocumentEditor:
 		#self.text.config(font=(self.fontname,self.fontsize))
 
 	def update_title(self,key):
+		if key == 'update':
+			self.root.title(self.title+" - Unsaved")
+			return
 		if (key.keycode not in [104,9,100,88,83,85,80,102,98]):
 			i = self.text.get('1.0','end-1c')
 			if i != self.corrected:
@@ -133,8 +134,9 @@ class DocumentEditor:
 
 	def update_format(self,format,orig,fontsize):
 		self.text.tag_remove(orig,'sel.first','sel.last')
-		self.text.tag_config(format+'|font:'+fontsize,font=(self.fontnamevar.get(),int(fontsize),format.replace('format:','')))
-		self.text.tag_add(format+'|font:'+fontsize,'sel.first','sel.last')
+		self.text.tag_config(format+'|fontsize:'+fontsize,font=(self.fontnamevar.get(),int(fontsize),format.replace('format:','')))
+		self.text.tag_add(format+'|fontsize:'+fontsize,'sel.first','sel.last')
+		self.update_title(key='update')
 
 	def bold(self,args=None):
 		try:
@@ -142,7 +144,7 @@ class DocumentEditor:
 			try:
 				format = [x for x in i if 'format:' in x][0]
 			except:
-				format = 'format:|font:'+self.fontsizevar.get()
+				format = 'format:|fontsize:'+self.fontsizevar.get()
 			orig = format
 			format = orig.split("|")[0]
 			font = orig.split("|")[1]
@@ -151,7 +153,7 @@ class DocumentEditor:
 				format += 'bold '
 			else:
 				format = format.replace('bold ','normal ')
-			self.update_format(format,orig,font.replace("font:",''))
+			self.update_format(format,orig,font.replace("fontsize:",''))
 		except:
 			pass
 
@@ -161,7 +163,7 @@ class DocumentEditor:
 			try:
 				format = [x for x in i if 'format:' in x][0]
 			except:
-				format = 'format:|font:'+self.fontsizevar.get()
+				format = 'format:|fontsize:'+self.fontsizevar.get()
 			orig = format
 			format = orig.split("|")[0]
 			font = orig.split("|")[1]
@@ -169,7 +171,7 @@ class DocumentEditor:
 				format += 'italic '
 			else:
 				format = format.replace('italic ','')
-			self.update_format(format,orig,font.replace("font:",''))
+			self.update_format(format,orig,font.replace("fontsize:",''))
 		except:
 			pass
 
@@ -179,7 +181,7 @@ class DocumentEditor:
 			try:
 				format = [x for x in i if 'format:' in x][0]
 			except:
-				format = 'format:|font:'+self.fontsizevar.get()
+				format = 'format:|fontsize:'+self.fontsizevar.get()
 			orig = format
 			format = orig.split("|")[0]
 			font = orig.split("|")[1]
@@ -187,7 +189,7 @@ class DocumentEditor:
 				format += 'underline '
 			else:
 				format = format.replace('underline ','')
-			self.update_format(format,orig,font.replace("font:",''))
+			self.update_format(format,orig,font.replace("fontsize:",''))
 		except:
 			pass
 
@@ -198,7 +200,7 @@ class DocumentEditor:
 				try:
 					format = [x for x in i if 'format:' in x][0]
 				except:
-					format = 'format:|font:'+self.fontsizevar.get()
+					format = 'format:|fontsize:'+self.fontsizevar.get()
 				orig = format
 				format = orig.split('|')[0]
 				font = self.fontsizevar.get()
