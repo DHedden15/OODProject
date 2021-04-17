@@ -63,8 +63,10 @@ class DocumentEditor:
 		self.line = ttk.Separator(self.frame,orient=tk.HORIZONTAL)
 		self.line.grid(row=1,column=0,sticky='EW')
 
-		fileMenu.add_command(label="Save as...",command=self.save)
+		fileMenu.add_command(label="Save as...",command=self.save,accelerator="Cmd+S")
+		root.bind("<Command-s>",self.save)
 		fileMenu.add_command(label="Correct Spelling...",command=self.handle,accelerator="Cmd+G")
+		root.bind("<Command-g>", self.handle)
 		fileMenu.add_command(label="Main Menu",command=self.menu)
 
 		self.text = tk.Text(self.frame,borderwidth=3)
@@ -87,7 +89,7 @@ class DocumentEditor:
 		self.newWindow = tk.Toplevel(self.root)
 		self.app = MainMenu(self.newWindow)
 
-	def save(self):
+	def save(self, args):
 		i = self.text.get("1.0","end-1c")
 		filename = filedialog.asksaveasfilename(initialdir = "./",title = "Select file",filetypes = (("PhonetikWrite files","*.pwf"),("all files","*.*")))
 		if filename == '':
