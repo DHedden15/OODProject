@@ -69,9 +69,9 @@ class DocumentEditor:
 		fileMenu.add_command(label="Open", command=self.open,accelerator="Cmd+O")
 		self.root.bind("<Command-o>",self.open_m)
 		fileMenu.add_command(label="Save as...",command=self.save,accelerator="Cmd+S")
-		root.bind("<Command-s>",self.save)
+		self.root.bind("<Command-s>",self.save)
 		fileMenu.add_command(label="Correct Spelling...",command=self.handle,accelerator="Cmd+G")
-		root.bind("<Command-g>", self.handle)
+		self.root.bind("<Command-g>", self.handle)
 		fileMenu.add_command(label="Main Menu",command=self.menu)
 
 		self.text = tk.Text(self.frame,borderwidth=3)
@@ -156,8 +156,9 @@ class DocumentEditor:
 		return whitespace
 
 	def correct(self):
+		pos = self.text.index(tk.INSERT)
+		print(pos)
 		original = self.text.get("1.0","end-1c")
-		pos = deepcopy(tk.CURRENT)
 		orig = deepcopy(original)
 		if orig != self.corrected:
 			i = deepcopy(orig)
@@ -210,6 +211,7 @@ class DocumentEditor:
 			self.text.mark_set("insert",float(current))
 			self.text.delete('1.0', tk.END)
 			self.text.insert("1.0", out)
+			self.text.mark_set(tk.INSERT,pos)
 			self.corrected = out
 
 class MainMenu:
