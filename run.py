@@ -364,7 +364,7 @@ class DocumentEditor:
 		self.app = DocumentEditor(self.newWindow,content,title,filename,data=data)
 
 	def open(self,args=None):
-		filename = filedialog.askopenfilename()
+		filename = filedialog.askopenfilename(filetypes = [("PhonetikWrite files","*.pwf")])
 		if filename == '':
 			return None
 		self.plist['last_opened_filename'] = filename
@@ -419,7 +419,7 @@ class DocumentEditor:
 			for index in indices_tcl:
 				indices_str.append(str(index))
 			data[name] = indices_str
-		filename = filedialog.asksaveasfilename(initialdir = "./",title = "Select file",filetypes = (("PhonetikWrite files","*.pwf"),("all files","*.*")))
+		filename = filedialog.asksaveasfilename(initialdir = "./",title = "Select file",filetypes = [("PhonetikWrite files","*.pwf")])
 		if filename == '':
 			return None
 		data['text'] = i
