@@ -126,13 +126,14 @@ class DocumentEditor:
 		self.text.config(undo=True,yscrollcommand=self.scrollbar.set)
 		s = self.fontsizevar.get()
 		fs = self.fontnamevar.get()
+		self.text.insert('1.0',' ')
 		self.text.tag_configure('format:|fontsize:'+s+"|fontname:"+fs,font=(fs,s))
-		self.text.tag_add('format:|fontsize:'+s+"|fontname:"+fs,'1.0','end-1c')
-		self.text.tag_add('justify:left', '1.0','end-1c')
+		self.text.tag_add('format:|fontsize:'+s+"|fontname:"+fs,'1.0','end')
+		self.text.tag_add('justify:left', '1.0','end')
 
 		self.text.bind('<period>',self.handle)
-		self.text.bind('<Key>',self.update_title)
-		self.text.bind('<ButtonRelease>',self.updateFormatVars)
+		self.text.bind('<KeyRelease>',self.update_title)
+		self.text.bind('<ButtonRelease>',self.button_release)
 		self.frame.pack(fill='both',expand=True)
 		self.frame.pack_propagate(0)
 
@@ -147,7 +148,14 @@ class DocumentEditor:
 	def fontchange(self,*args):
 		self.font(self)
 
-	def updateFormatVars(self,*args):
+	def button_release(self,event):
+		'''if self.text.tag_ranges('sel') == ():
+			self.updateFormatVars()
+		elif self.text.compare("end-1c", "==", "1.0"):
+			self.updateFormatVars()'''
+		pass
+
+	def updateFormatVars(self,event=None):
 		tags = self.text.tag_names(tk.INSERT)
 		for tag in tags:
 			if tag != 'sel' and 'justify' not in tag:
@@ -157,16 +165,32 @@ class DocumentEditor:
 				fontsize = spl[1].replace('fontsize:','')
 				self.fontnamevar.set(font)
 				self.fontsizevar.set(fontsize)
+		pass
 
 	def update_title(self,key):
-		if key == 'update':
+		try:
+			if key.keycode == 855638143 and self.text.compare("end-1c", "==", "1.0") or len(self.text.get('1.0','end-1c')) == 1:
+				s = self.fontsizevar.get()
+				fs = self.fontnamevar.get()
+				self.text.insert('1.0',' ')
+				self.text.tag_configure('format:|fontsize:'+s+"|fontname:"+fs,font=(fs,s))
+				self.text.tag_add('format:|fontsize:'+s+"|fontname:"+fs,'1.0','end')
+				self.text.tag_add('justify:left', '1.0','end')
+				self.updateFormatVars()
+			elif self.text.get('1.0') == ' ':
+				self.text.delete('1.0')
+				self.updateFormatVars()
+			else:
+				self.updateFormatVars()
 			self.root.title(self.title+" - Unsaved")
-			return
-		self.updateFormatVars()
-		if (key.keycode not in [104,9,100,88,83,85,80,102,98]):
-			i = self.text.get('1.0','end-1c')
-			if i != self.corrected:
+
+		except:
+			if key == 'update':
 				self.root.title(self.title+" - Unsaved")
+				return
+			elif self.text.get('1.0','end-1c') != self.corrected:
+					self.updateFormatVars()
+			self.root.title(self.title+" - Unsaved")
 
 	def left(self,args=None):
 		i = self.text.tag_names(f'{tk.SEL_LAST} - 1c')
