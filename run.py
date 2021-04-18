@@ -21,7 +21,7 @@ import math
 import tkinter.messagebox as messagebox
 
 class DocumentEditor:
-	def __init__(self, root,content='',title='New Document',filename=False,plist=None):
+	def __init__(self, root,content='',title='New Document',filename=False,plist=None,data=None):
 
 		self.fonts = ["Times New Roman", "Arial", "Times", "Helvetica", "Courier", "Georgia"]
 
@@ -126,10 +126,23 @@ class DocumentEditor:
 		self.text.config(undo=True,yscrollcommand=self.scrollbar.set)
 		s = self.fontsizevar.get()
 		fs = self.fontnamevar.get()
-		self.text.insert('1.0',' ')
-		self.text.tag_configure('format:|fontsize:'+s+"|fontname:"+fs,font=(fs,s))
-		self.text.tag_add('format:|fontsize:'+s+"|fontname:"+fs,'1.0','end')
-		self.text.tag_add('justify:left', '1.0','end')
+		if data == None:
+			self.text.insert('1.0',' ')
+			self.text.tag_configure('format:|fontsize:'+s+"|fontname:"+fs,font=(fs,s))
+			self.text.tag_add('format:|fontsize:'+s+"|fontname:"+fs,'1.0','end')
+			self.text.tag_add('justify:left', '1.0','end')
+		else:
+			self.text.insert('1.0',content)
+			for tag in data.keys():
+				if tag != 'text' and tag != 'sel':
+					for i in range(0,len(data[tag])-1):
+						style = tag.split("|")
+						format = style[0].replace("format:",'')
+						fontsize = style[1].replace("fontsize:",'')
+						fontname = style[2].replace("fontname:",'')
+						self.text.tag_config(tag,font=(fontname,int(fontsize),format))
+						self.text.tag_add(tag,data[tag][i],data[tag][i+1])
+
 
 		self.text.bind('<period>',self.handle)
 		self.text.bind('<KeyRelease>',self.update_title)
@@ -337,32 +350,34 @@ class DocumentEditor:
 	def menu(self):
 		self.app = MainMenu(tk.Tk())
 
-	def new(self,content='',title='New Document',filename=False,args=None):
+	def new(self,content='',title='New Document',filename=False,args=None,data=None):
 		try:
 			a = content.keycode
 			content = ''
 		except:
 			content = content
 		self.newWindow = tk.Tk()
-		self.app = DocumentEditor(self.newWindow,content,title,filename)
+		self.app = DocumentEditor(self.newWindow,content,title,filename,data=data)
 
 	def open(self,args=None):
 		filename = filedialog.askopenfilename()
 		if filename == '':
 			return None
 		self.plist['last_opened_filename'] = filename
-		f = open(filename,'r')
-		i = f.read()
+		f = open(filename,'rb')
+		data = pickle.load(f)
 		f.close()
-		self.new(i,filename.split('.')[0].split('/')[-1:][0],filename=filename)
+		i = data['text']
+		self.new(i,filename.split('.')[0].split('/')[-1:][0],filename=filename,data=data)
 
 	def open_last(self,args=None):
 		try:
 			filename = self.plist['last_opened_filename']
-			f = open(filename,'r')
-			i = f.read()
+			f = open(filename,'rb')
+			data = pickle.load(f)
 			f.close()
-			self.new(i,filename.split('.')[0].split('/')[-1:][0],filename=filename)
+			i = data['text']
+			self.new(i,filename.split('.')[0].split('/')[-1:][0],filename=filename,data=data)
 		except:
 			self.open(self)
 
@@ -371,19 +386,41 @@ class DocumentEditor:
 			self.save_as(self)
 		else:
 			i = self.text.get("1.0","end-1c")
-			f = open(self.filename,'w')
-			f.write(i)
+			i = ''.join([x for x in i])
+			tags = [tag for tag in self.gettext()]
+			data = {}
+			for tag in tags:
+				name = tag[0]
+				indices_tcl = tag[1]
+				indices_str = []
+				for index in indices_tcl:
+					indices_str.append(str(index))
+				data[name] = indices_str
+			data['text'] = i
+			f = open(self.filename,'wb')
+			pickle.dump(data,f)
 			f.close()
 			self.plist['last_opened_filename'] = self.filename
 			self.root.title(self.title)
 
 	def save_as(self, args=None):
 		i = self.text.get("1.0","end-1c")
+		i = ''.join([x for x in i])
+		tags = [tag for tag in self.gettext()]
+		data = {}
+		for tag in tags:
+			name = tag[0]
+			indices_tcl = tag[1]
+			indices_str = []
+			for index in indices_tcl:
+				indices_str.append(str(index))
+			data[name] = indices_str
 		filename = filedialog.asksaveasfilename(initialdir = "./",title = "Select file",filetypes = (("PhonetikWrite files","*.pwf"),("all files","*.*")))
 		if filename == '':
 			return None
-		f = open(filename,'w')
-		f.write(i)
+		data['text'] = i
+		f = open(filename,'wb')
+		pickle.dump(data,f)
 		f.close()
 		self.plist['last_opened_filename'] = filename
 		self.filename = filename
