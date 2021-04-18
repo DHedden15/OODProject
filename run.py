@@ -368,11 +368,14 @@ class DocumentEditor:
 		if filename == '':
 			return None
 		self.plist['last_opened_filename'] = filename
-		f = open(filename,'rb')
-		data = pickle.load(f)
-		f.close()
-		i = data['text']
-		self.new(i,filename.split('.')[0].split('/')[-1:][0],filename=filename,data=data)
+		try:
+			f = open(filename,'rb')
+			data = pickle.load(f)
+			f.close()
+			i = data['text']
+			self.new(i,filename.split('.')[0].split('/')[-1:][0],filename=filename,data=data)
+		except:
+			messagebox.showerror("File Opening Error", "The selected file has been corrupted.")
 
 	def open_last(self,args=None):
 		try:
