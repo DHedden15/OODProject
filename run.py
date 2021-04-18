@@ -21,11 +21,16 @@ import math
 import tkinter.messagebox as messagebox
 
 class DocumentEditor:
-	def __init__(self, root, content='',title='New Document',filename=False):
+	def __init__(self, root,content='',title='New Document',filename=False,plist=None):
 
 		self.fonts = ["Times New Roman", "Arial", "Times", "Helvetica", "Courier", "Georgia"]
 
 		self.filename = filename
+		if plist == None:
+			plist = {'last_opened_filename':self.filename}
+			f = open('pkl.plist','wb')
+			pickle.dump(plist,f)
+			f.close()
 		self.root = root
 		self.title = title
 		self.root.title(self.title)
@@ -93,8 +98,10 @@ class DocumentEditor:
 		self.root.bind("<Command-n>",self.new)
 		fileMenu.add_command(label="Open", command=self.open,accelerator="Cmd+O")
 		self.root.bind("<Command-o>",self.open)
-		fileMenu.add_command(label="Save as...",command=self.save_as,accelerator="Cmd+Shift+S")
-		self.root.bind("<Command-Shift-s>",self.save_as)
+		fileMenu.add_command(label="Open Last...", command=self.open_last,accelerator="Cmd+E")
+		self.root.bind("<Command-Shift-O>",self.open_last)
+		fileMenu.add_command(label="Save as...",command=self.save_as,accelerator="Cmd+A")
+		self.root.bind("<Command-Shift-S>",self.save_as)
 		fileMenu.add_command(label="Save...",command=self.save_as,accelerator="Cmd+S")
 		self.root.bind("<Command-s>",self.save)
 		fileMenu.add_command(label="Correct Spelling...",command=self.handle,accelerator="Cmd+G")
@@ -122,7 +129,7 @@ class DocumentEditor:
 
 		self.text.bind('<period>',self.handle)
 		self.text.bind('<Key>',self.update_title)
-		self.text.bind('<Button>',self.updateFormatVars)
+		self.text.bind('<ButtonRelease>',self.updateFormatVars)
 		self.frame.pack(fill='both',expand=True)
 		self.frame.pack_propagate(0)
 
@@ -136,7 +143,7 @@ class DocumentEditor:
 		tags = self.text.tag_names(tk.INSERT)
 		for tag in tags:
 			if tag != 'sel' and 'justify' not in tag:
-				self.text.tag_add(tag,tk.INSERT,tk.INSERT +'+ 1c')
+				self.text.tag_add(tag,tk.INSERT,tk.INSERT + ' +1c')
 				spl = tag.split("|")
 				font = spl[2].replace('fontname:','')
 				fontsize = spl[1].replace('fontsize:','')
@@ -293,7 +300,10 @@ class DocumentEditor:
 	def close(self):
 		if (messagebox.askquestion(title="Save", message="Save file?") != 'no'):
 			self.save()
-		self.menu()
+		plist['last_opened_filename'] = self.filename
+		f = open('pkl.plist','wb')
+		pickle.dump(plist,f)
+		f.close()
 		self.root.destroy()
 
 	def menu(self):
@@ -315,6 +325,21 @@ class DocumentEditor:
 		f = open(filename,'r')
 		i = f.read()
 		f.close()
+		plist['last_opened_filename'] = filename
+		f = open('pkl.plist','wb')
+		pickle.dump(plist,f)
+		f.close()
+		self.new(i,filename.split('.')[0].split('/')[-1:][0],filename=filename)
+
+	def open_last(self,args=None):
+		filename = plist['last_opened_filename']
+		f = open(filename,'r')
+		i = f.read()
+		f.close()
+		plist['last_opened_filename'] = filename
+		f = open('pkl.plist','wb')
+		pickle.dump(plist,f)
+		f.close()
 		self.new(i,filename.split('.')[0].split('/')[-1:][0],filename=filename)
 
 	def save(self,args=None):
@@ -327,7 +352,7 @@ class DocumentEditor:
 			f.close()
 			self.root.title(self.title)
 
-	def save_as(self, args):
+	def save_as(self, args=None):
 		i = self.text.get("1.0","end-1c")
 		filename = filedialog.asksaveasfilename(initialdir = "./",title = "Select file",filetypes = (("PhonetikWrite files","*.pwf"),("all files","*.*")))
 		if filename == '':
@@ -437,46 +462,6 @@ class DocumentEditor:
 			self.text.mark_set(tk.INSERT,pos)
 			self.corrected = out
 
-class MainMenu:
-	def __init__(self,root):
-		self.root = root
-		self.root.title("PhonetikWrite")
-		self.root.geometry('250x100')
-
-		new_button = tk.Button(self.root, text="New Document", command=self.new)
-		new_button.pack()
-
-		open_button = tk.Button(self.root, text="Open Document", command=self.open)
-		open_button.pack()
-
-		menubar = tk.Menu(self.root)
-		filemenu = tk.Menu(menubar, tearoff=0)
-		filemenu.add_command(label="New", command=self.new,accelerator="Cmd+N")
-		self.root.bind("<Command-n>",self.new_m)
-		filemenu.add_command(label="Open", command=self.open,accelerator="Cmd+O")
-		self.root.bind("<Command-o>",self.open_m)
-		menubar.add_cascade(label='File',menu=filemenu)
-
-		self.root.config(menu=menubar)
-
-	def new_m(self,args):
-		self.new()
-	def open_m(self,args):
-		self.open()
-
-	def new(self,content='',title='New Document',filename=False):
-		self.newWindow = tk.Tk()
-		self.app = DocumentEditor(self.newWindow,content,title,filename)
-
-	def open(self):
-		filename = filedialog.askopenfilename()
-		if filename == '':
-			return None
-		f = open(filename,'r')
-		i = f.read()
-		f.close()
-		self.new(i,filename.split('.')[0].split('/')[-1:][0],filename=filename)
-
 	def run(self):
 		self.root.mainloop()
 
@@ -528,6 +513,14 @@ class Algo:
 		arr = exp(arr.astype(float))
 		arr = arr / arr.sum()
 		return arr
-gui = MainMenu(tk.Tk())
 
-gui.run()
+if __name__ == '__main__':
+	try:
+		f = open('pkl.plist','rb')
+		plist = pickle.load(f)
+		f.close()
+	except:
+		plist = None
+	gui = DocumentEditor(tk.Tk(),plist=plist)
+
+	gui.run()
