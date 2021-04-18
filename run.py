@@ -26,11 +26,14 @@ class DocumentEditor:
 		self.fonts = ["Times New Roman", "Arial", "Times", "Helvetica", "Courier", "Georgia"]
 
 		self.filename = filename
-		if plist == None:
-			plist = {'last_opened_filename':self.filename}
-			f = open('pkl.plist','wb')
-			pickle.dump(plist,f)
-			f.close()
+		self.plist = plist
+		if plist == None and filename != False:
+			self.plist = {'last_opened_filename':self.filename}
+			self.save_plist()
+		elif plist == None and type(filename) == 'str':
+			self.plist['last_opened_filename'] = self.filename
+			self.save_plist()
+
 		self.root = root
 		self.title = title
 		self.root.title(self.title)
@@ -98,9 +101,9 @@ class DocumentEditor:
 		self.root.bind("<Command-n>",self.new)
 		fileMenu.add_command(label="Open", command=self.open,accelerator="Cmd+O")
 		self.root.bind("<Command-o>",self.open)
-		fileMenu.add_command(label="Open Last...", command=self.open_last,accelerator="Cmd+E")
+		fileMenu.add_command(label="Open Last...", command=self.open_last,accelerator="Cmd+Shift+O")
 		self.root.bind("<Command-Shift-O>",self.open_last)
-		fileMenu.add_command(label="Save as...",command=self.save_as,accelerator="Cmd+A")
+		fileMenu.add_command(label="Save as...",command=self.save_as,accelerator="Cmd+Shift+S")
 		self.root.bind("<Command-Shift-S>",self.save_as)
 		fileMenu.add_command(label="Save...",command=self.save_as,accelerator="Cmd+S")
 		self.root.bind("<Command-s>",self.save)
@@ -132,6 +135,11 @@ class DocumentEditor:
 		self.text.bind('<ButtonRelease>',self.updateFormatVars)
 		self.frame.pack(fill='both',expand=True)
 		self.frame.pack_propagate(0)
+
+	def save_plist(self):
+		f = open('pkl.plist','wb')
+		pickle.dump(self.plist,f)
+		f.close()
 
 	def sizechange(self,*args):
 		self.size(self)
@@ -300,10 +308,7 @@ class DocumentEditor:
 	def close(self):
 		if (messagebox.askquestion(title="Save", message="Save file?") != 'no'):
 			self.save()
-		plist['last_opened_filename'] = self.filename
-		f = open('pkl.plist','wb')
-		pickle.dump(plist,f)
-		f.close()
+		self.save_plist()
 		self.root.destroy()
 
 	def menu(self):
@@ -322,25 +327,21 @@ class DocumentEditor:
 		filename = filedialog.askopenfilename()
 		if filename == '':
 			return None
+		self.plist['last_opened_filename'] = filename
 		f = open(filename,'r')
 		i = f.read()
-		f.close()
-		plist['last_opened_filename'] = filename
-		f = open('pkl.plist','wb')
-		pickle.dump(plist,f)
 		f.close()
 		self.new(i,filename.split('.')[0].split('/')[-1:][0],filename=filename)
 
 	def open_last(self,args=None):
-		filename = plist['last_opened_filename']
-		f = open(filename,'r')
-		i = f.read()
-		f.close()
-		plist['last_opened_filename'] = filename
-		f = open('pkl.plist','wb')
-		pickle.dump(plist,f)
-		f.close()
-		self.new(i,filename.split('.')[0].split('/')[-1:][0],filename=filename)
+		try:
+			filename = self.plist['last_opened_filename']
+			f = open(filename,'r')
+			i = f.read()
+			f.close()
+			self.new(i,filename.split('.')[0].split('/')[-1:][0],filename=filename)
+		except:
+			self.open(self)
 
 	def save(self,args=None):
 		if self.filename == False:
@@ -350,6 +351,7 @@ class DocumentEditor:
 			f = open(self.filename,'w')
 			f.write(i)
 			f.close()
+			self.plist['last_opened_filename'] = self.filename
 			self.root.title(self.title)
 
 	def save_as(self, args=None):
@@ -360,6 +362,7 @@ class DocumentEditor:
 		f = open(filename,'w')
 		f.write(i)
 		f.close()
+		self.plist['last_opened_filename'] = filename
 		self.filename = filename
 		self.title = self.filename.split('.')[0].split('/')[-1:][0]
 		self.root.title(self.title)
