@@ -134,7 +134,7 @@ class DocumentEditor:
 		else:
 			self.text.insert('1.0',content)
 			for tag in data.keys():
-				if tag != 'text' and tag != 'sel':
+				if tag != 'text' and tag != 'sel' and 'justify' not in tag:
 					for i in range(0,len(data[tag])-1):
 						style = tag.split("|")
 						format = style[0].replace("format:",'')
@@ -142,7 +142,11 @@ class DocumentEditor:
 						fontname = style[2].replace("fontname:",'')
 						self.text.tag_config(tag,font=(fontname,int(fontsize),format))
 						self.text.tag_add(tag,data[tag][i],data[tag][i+1])
-
+				if 'justify' in tag:
+					for i in range(0,len(data[tag])-1):
+						justify = tag.replace("justify:",'')
+						self.text.tag_config(tag,justify=justify)
+						self.text.tag_add(tag,data[tag][i],data[tag][i+1])
 
 		self.text.bind('<period>',self.handle)
 		self.text.bind('<KeyRelease>',self.update_title)
