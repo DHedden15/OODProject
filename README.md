@@ -1,4 +1,6 @@
-# OODProject
+# OODProject - PhonetikWrite
+
+![PhonetikWrite](./resources/logo.png)
 
 Project for Object Oriented Design, Spring 2021
 Prof. Rakeshkumar Shukla
