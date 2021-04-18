@@ -12,4 +12,4 @@ Prof. Rakeshkumar Shukla
 - Install python3.8.9
 - Using that python installation, run `sudo -H python3 -m pip install -r requirements.txt`
 - Ensure tkinter comes with your python installation.
-- Run `python3 test.py` 
+- Run `python3 run.py` 
