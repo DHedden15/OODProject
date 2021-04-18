@@ -107,6 +107,7 @@ class DocumentEditor:
 		self.root.bind("<Command-i>", self.italic)
 		editMenu.add_command(label="Underline",command=self.handle,accelerator="Cmd+U")
 		self.root.bind("<Command-u>", self.underline)
+		self.root.bind("<Command-l>", self.gettext)
 
 		self.text = tk.Text(self.frame,borderwidth=3)
 		self.text.insert("1.0",content)
@@ -116,11 +117,12 @@ class DocumentEditor:
 		s = self.fontsizevar.get()
 		fs = self.fontnamevar.get()
 		self.text.tag_configure('format:|fontsize:'+s+"|fontname:"+fs,font=(fs,s))
-		self.text.tag_add('format:|fontsize:'+s+"|fontname:"+fs,'1.0','end')
-		self.text.tag_add('justify:left', '1.0','end')
+		self.text.tag_add('format:|fontsize:'+s+"|fontname:"+fs,'1.0','end-1c')
+		self.text.tag_add('justify:left', '1.0','end-1c')
 
 		self.text.bind('<period>',self.handle)
 		self.text.bind('<Key>',self.update_title)
+		self.text.bind('<Button>',self.updateFormatVars)
 		self.frame.pack(fill='both',expand=True)
 		self.frame.pack_propagate(0)
 
@@ -130,10 +132,22 @@ class DocumentEditor:
 	def fontchange(self,*args):
 		self.font(self)
 
+	def updateFormatVars(self,*args):
+		tags = self.text.tag_names(tk.INSERT)
+		for tag in tags:
+			if tag != 'sel' and 'justify' not in tag:
+				self.text.tag_add(tag,tk.INSERT,tk.INSERT +'+ 1c')
+				spl = tag.split("|")
+				font = spl[2].replace('fontname:','')
+				fontsize = spl[1].replace('fontsize:','')
+				self.fontnamevar.set(font)
+				self.fontsizevar.set(fontsize)
+
 	def update_title(self,key):
 		if key == 'update':
 			self.root.title(self.title+" - Unsaved")
 			return
+		self.updateFormatVars()
 		if (key.keycode not in [104,9,100,88,83,85,80,102,98]):
 			i = self.text.get('1.0','end-1c')
 			if i != self.corrected:
@@ -353,10 +367,16 @@ class DocumentEditor:
 				whitespace.append([False,False])
 		return whitespace
 
+	def gettext(self,*args):
+		orig = deepcopy(self.text.get('1.0','end'))
+		tags = [(x,self.text.tag_ranges(x)) for x in self.text.tag_names()]
+		return tags
+
 	def correct(self):
 		pos = self.text.index(tk.INSERT)
-		original = self.text.get("1.0","end-1c")
+		original = self.text.get("1.0","end")
 		orig = deepcopy(original)
+		tags = self.gettext()
 		if orig != self.corrected:
 			i = deepcopy(orig)
 			caps = [x for x in i.split(' ') if x != '']
@@ -408,6 +428,12 @@ class DocumentEditor:
 			self.text.mark_set("insert",float(current))
 			self.text.delete('1.0', tk.END)
 			self.text.insert("1.0", out)
+			for tag in tags:
+				if tag[0]!= 'sel':
+					#tag[0] = name
+					#tag[1] = tuple of indice pairs
+					for i in range(0,len(tag[1])-1):
+						self.text.tag_add(tag[0],tag[1][i],tag[1][i+1])
 			self.text.mark_set(tk.INSERT,pos)
 			self.corrected = out
 
