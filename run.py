@@ -149,11 +149,10 @@ class DocumentEditor:
 		self.font(self)
 
 	def button_release(self,event):
-		'''if self.text.tag_ranges('sel') == ():
+		if self.text.tag_ranges('sel') == ():
 			self.updateFormatVars()
 		elif self.text.compare("end-1c", "==", "1.0"):
-			self.updateFormatVars()'''
-		pass
+			self.update_title()
 
 	def updateFormatVars(self,event=None):
 		tags = self.text.tag_names(tk.INSERT)
@@ -169,7 +168,7 @@ class DocumentEditor:
 
 	def update_title(self,key):
 		try:
-			if key.keycode == 855638143 and self.text.compare("end-1c", "==", "1.0") or len(self.text.get('1.0','end-1c')) == 1:
+			if key.keycode == 855638143 and self.text.compare("end-1c", "==", "1.0"):
 				s = self.fontsizevar.get()
 				fs = self.fontnamevar.get()
 				self.text.insert('1.0',' ')
