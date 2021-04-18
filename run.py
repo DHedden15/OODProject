@@ -21,13 +21,28 @@ import math
 import tkinter.messagebox as messagebox
 
 class DocumentEditor:
-	def __init__(self, root, content=''):
+	def __init__(self, root,content='',title='New Document',filename=False,plist=None,data=None):
+
+		self.fonts = ["Times New Roman", "Arial", "Times", "Helvetica", "Courier", "Georgia"]
+
+		self.filename = filename
+		self.plist = plist
+		if plist == None and filename != False:
+			self.plist = {'last_opened_filename':self.filename}
+			self.save_plist()
+		elif plist == None and type(filename) == 'str':
+			self.plist['last_opened_filename'] = self.filename
+			self.save_plist()
+
 		self.root = root
+		self.title = title
+		self.root.title(self.title)
 		self.frame = tk.Frame(self.root, height=500,width=500)
 		self.root.protocol("WM_DELETE_WINDOW", self.close)
 		self.frame.grid_propagate(False)
 
-		self.font = Font(family='Times New Roman',size=20)
+		self.fontname = 'Times New Roman'
+		self.fontsize = 20
 
 		self.frame.grid_rowconfigure(0,weight=0)
 		self.frame.grid_rowconfigure(1,weight=0)
@@ -37,27 +52,45 @@ class DocumentEditor:
 		self.scrollbar = tk.Scrollbar(self.frame)
 		self.scrollbar.grid(row=2,column=1,sticky='NSEW')
 
-		menubar = tk.Menu(self.root)
+		menubar = tk.Menu(self.frame)
 		self.root.config(menu=menubar)
 
 		fileMenu = tk.Menu(menubar)
 		menubar.add_cascade(label="File",menu=fileMenu)
 
+		editMenu = tk.Menu(menubar)
+		menubar.add_cascade(label="Edit",menu=editMenu)
+
 		self.settingsFrame = tk.Frame(self.frame)
 		self.settingsFrame.grid(row=0,column=0,sticky='E')
-		fonts = font.families()
-		self.fontvariable = tk.StringVar(self.frame)
-		self.fontvariable.set('Times New Roman')
-		self.fontvariable.trace('w',self.fontchange)
-		self.fontMenu = tk.OptionMenu(self.settingsFrame,self.fontvariable,*fonts)
+		self.fontnamevar = tk.StringVar(self.frame)
+		self.fontnamevar.set(self.fontname)
+		self.fontnamevar.trace('w',self.fontchange)
+		self.fontMenu = tk.OptionMenu(self.settingsFrame,self.fontnamevar,*self.fonts)
 		self.fontMenu.grid(row=0,column=0)
 
 		sizes = range(1,101)
-		self.fontsize = tk.IntVar(self.frame)
-		self.fontsize.set(50)
-		self.fontsize.trace('w', self.sizechange)
-		self.sizeMenu = tk.OptionMenu(self.settingsFrame,self.fontsize,*sizes)
+		self.fontsizevar = tk.StringVar(self.frame)
+		self.fontsizevar.set(self.fontsize)
+		self.sizeMenu = ttk.Combobox(self.settingsFrame,textvariable=self.fontsizevar)
+		self.sizeMenu['values'] = [str(x) for x in range(1,101)]
+		self.sizeMenu.current(self.fontsize-1)
+		self.fontsizevar.trace('w', self.sizechange)
 		self.sizeMenu.grid(row=0,column=1)
+
+		self.bold_button = tk.Button(self.settingsFrame,text='B',command=self.bold)
+		self.bold_button.grid(row=0,column=2)
+		self.italic_button = tk.Button(self.settingsFrame,text='I',command=self.italic)
+		self.italic_button.grid(row=0,column=3)
+		self.underline_button = tk.Button(self.settingsFrame,text='U',command=self.underline)
+		self.underline_button.grid(row=0,column=4)
+
+		self.left_button = tk.Button(self.settingsFrame,text='L',command=self.left)
+		self.left_button.grid(row=1,column=0)
+		self.center_button = tk.Button(self.settingsFrame,text='C',command=self.center)
+		self.center_button.grid(row=1,column=1)
+		self.right_button = tk.Button(self.settingsFrame,text='R',command=self.right)
+		self.right_button.grid(row=1,column=2)
 
 		self.corrected = ''
 
@@ -65,67 +98,334 @@ class DocumentEditor:
 		self.line.grid(row=1,column=0,sticky='EW')
 
 		fileMenu.add_command(label="New", command=self.new,accelerator="Cmd+N")
-		self.root.bind("<Command-n>",self.new_m)
+		self.root.bind("<Command-n>",self.new)
 		fileMenu.add_command(label="Open", command=self.open,accelerator="Cmd+O")
-		self.root.bind("<Command-o>",self.open_m)
-		fileMenu.add_command(label="Save as...",command=self.save,accelerator="Cmd+S")
+		self.root.bind("<Command-o>",self.open)
+		fileMenu.add_command(label="Open Last...", command=self.open_last,accelerator="Cmd+Shift+O")
+		self.root.bind("<Command-Shift-O>",self.open_last)
+		fileMenu.add_command(label="Save as...",command=self.save_as,accelerator="Cmd+Shift+S")
+		self.root.bind("<Command-Shift-S>",self.save_as)
+		fileMenu.add_command(label="Save...",command=self.save_as,accelerator="Cmd+S")
 		self.root.bind("<Command-s>",self.save)
 		fileMenu.add_command(label="Correct Spelling...",command=self.handle,accelerator="Cmd+G")
 		self.root.bind("<Command-g>", self.handle)
 		fileMenu.add_command(label="Main Menu",command=self.menu)
 
+		editMenu.add_command(label="Bold",command=self.handle,accelerator="Cmd+B")
+		self.root.bind("<Command-b>", self.bold)
+		editMenu.add_command(label="Italic",command=self.handle,accelerator="Cmd+I")
+		self.root.bind("<Command-i>", self.italic)
+		editMenu.add_command(label="Underline",command=self.handle,accelerator="Cmd+U")
+		self.root.bind("<Command-u>", self.underline)
+		self.root.bind("<Command-l>", self.gettext)
+
 		self.text = tk.Text(self.frame,borderwidth=3)
 		self.text.insert("1.0",content)
 		self.text.grid(row=2,column=0,sticky='NSEW')
 		self.scrollbar.config(command=self.text.yview)
-		self.text.config(font=self.font,undo=True,yscrollcommand=self.scrollbar.set)
+		self.text.config(undo=True,yscrollcommand=self.scrollbar.set)
+		s = self.fontsizevar.get()
+		fs = self.fontnamevar.get()
+		if data == None:
+			self.text.insert('1.0',' ')
+			self.text.tag_configure('format:|fontsize:'+s+"|fontname:"+fs,font=(fs,s))
+			self.text.tag_add('format:|fontsize:'+s+"|fontname:"+fs,'1.0','end')
+			self.text.tag_add('justify:left', '1.0','end')
+		else:
+			self.text.insert('1.0',content)
+			for tag in data.keys():
+				if tag != 'text' and tag != 'sel':
+					for i in range(0,len(data[tag])-1):
+						style = tag.split("|")
+						format = style[0].replace("format:",'')
+						fontsize = style[1].replace("fontsize:",'')
+						fontname = style[2].replace("fontname:",'')
+						self.text.tag_config(tag,font=(fontname,int(fontsize),format))
+						self.text.tag_add(tag,data[tag][i],data[tag][i+1])
+
 
 		self.text.bind('<period>',self.handle)
+		self.text.bind('<KeyRelease>',self.update_title)
+		self.text.bind('<ButtonRelease>',self.button_release)
 		self.frame.pack(fill='both',expand=True)
 		self.frame.pack_propagate(0)
 
+	def save_plist(self):
+		f = open('pkl.plist','wb')
+		pickle.dump(self.plist,f)
+		f.close()
+
 	def sizechange(self,*args):
-		self.font.config(size=self.fontsize.get())
+		self.size(self)
 
 	def fontchange(self,*args):
-		self.font.config(family=self.fontvariable.get())
+		self.font(self)
 
-	def new_m(self,args):
-		self.new()
-	def open_m(self,args):
-		self.open()
+	def button_release(self,event):
+		if self.text.tag_ranges('sel') == ():
+			self.updateFormatVars()
+		elif self.text.compare("end-1c", "==", "1.0"):
+			self.update_title()
+
+	def updateFormatVars(self,event=None):
+		tags = self.text.tag_names(tk.INSERT)
+		for tag in tags:
+			if tag != 'sel' and 'justify' not in tag:
+				self.text.tag_add(tag,tk.INSERT,tk.INSERT + ' +1c')
+				spl = tag.split("|")
+				font = spl[2].replace('fontname:','')
+				fontsize = spl[1].replace('fontsize:','')
+				self.fontnamevar.set(font)
+				self.fontsizevar.set(fontsize)
+		pass
+
+	def update_title(self,key):
+		try:
+			if key.keycode == 855638143 and self.text.compare("end-1c", "==", "1.0"):
+				s = self.fontsizevar.get()
+				fs = self.fontnamevar.get()
+				self.text.insert('1.0',' ')
+				self.text.tag_configure('format:|fontsize:'+s+"|fontname:"+fs,font=(fs,s))
+				self.text.tag_add('format:|fontsize:'+s+"|fontname:"+fs,'1.0','end')
+				self.text.tag_add('justify:left', '1.0','end')
+				self.updateFormatVars()
+			elif self.text.get('1.0') == ' ':
+				self.text.delete('1.0')
+				self.updateFormatVars()
+			else:
+				self.updateFormatVars()
+			self.root.title(self.title+" - Unsaved")
+
+		except:
+			if key == 'update':
+				self.root.title(self.title+" - Unsaved")
+				return
+			elif self.text.get('1.0','end-1c') != self.corrected:
+					self.updateFormatVars()
+			self.root.title(self.title+" - Unsaved")
+
+	def left(self,args=None):
+		i = self.text.tag_names(f'{tk.SEL_LAST} - 1c')
+		try:
+			justify = [x for x in i if "justify:" in x][0]
+		except:
+			justify = "justify:"
+		orig = justify
+		if "left" not in justify:
+			self.text.tag_remove(orig,'sel.first','sel.last')
+			self.text.tag_config('justify:left', justify="left")
+			self.text.tag_add('justify:left', 'sel.first','sel.last')
+
+	def right(self,args=None):
+		i = self.text.tag_names(f'{tk.SEL_LAST} - 1c')
+		try:
+			justify = [x for x in i if "justify:" in x][0]
+		except:
+			justify = "justify:"
+		orig = justify
+		if "right" not in justify:
+			self.text.tag_remove(orig,'sel.first','sel.last')
+			self.text.tag_config('justify:right', justify="right")
+			self.text.tag_add('justify:right', 'sel.first','sel.last')
+
+	def center(self,args=None):
+		i = self.text.tag_names(f'{tk.SEL_LAST} - 1c')
+		try:
+			justify = [x for x in i if "justify:" in x][0]
+		except:
+			justify = "justify:"
+		orig = justify
+		if "center" not in justify:
+			self.text.tag_remove(orig,'sel.first','sel.last')
+			self.text.tag_config('justify:center', justify="center")
+			self.text.tag_add('justify:center', 'sel.first','sel.last')
+
+	def update_format(self,format,orig,fontsize,fontname,id=0):
+		if id == 1: # For some reason this is the only way I can get the fonts to change.
+			fontname = self.fontnamevar.get()
+		self.text.tag_remove(orig,'sel.first','sel.last')
+		tag = format+"|fontsize:"+fontsize+"|fontname:"+fontname
+		self.text.tag_config(tag,font=(fontname,int(fontsize),format.replace('format:','')))
+		self.text.tag_add(tag,'sel.first','sel.last')
+		self.update_title(key='update')
+
+	def bold(self,args=None):
+		try:
+			i = self.text.tag_names(f'{tk.SEL_LAST} - 1c')
+			try:
+				format = [x for x in i if 'format:' in x][0]
+			except:
+				format = 'format:|fontsize:'+self.fontsizevar.get()+'|fontname:'+self.fontnamevar.get()
+			orig = format
+			format = orig.split("|")[0]
+			fontsize = orig.split("|")[1].replace("fontsize:","")
+			fontname = orig.split("|")[2].replace("fontname:","")
+			if 'bold' not in format:
+				format = format.replace('normal ','')
+				format += 'bold '
+			else:
+				format = format.replace('bold ','normal ')
+			self.update_format(format,orig,fontsize,fontname)
+		except:
+			pass
+
+	def italic(self,args=None):
+		try:
+			i = self.text.tag_names(f'{tk.SEL_LAST} - 1c')
+			try:
+				format = [x for x in i if 'format:' in x][0]
+			except:
+				format = 'format:|fontsize:'+self.fontsizevar.get()+'|fontname:'+self.fontnamevar.get()
+			orig = format
+			format = orig.split("|")[0]
+			fontsize = orig.split("|")[1].replace("fontsize:","")
+			fontname = orig.split("|")[2].replace("fontname:","")
+			if 'italic' not in format:
+				format += 'italic '
+			else:
+				format = format.replace('italic ','')
+			self.update_format(format,orig,fontsize,fontname)
+		except:
+			pass
+
+	def underline(self,args=None):
+		try:
+			i = self.text.tag_names(f'{tk.SEL_LAST} - 1c')
+			try:
+				format = [x for x in i if 'format:' in x][0]
+			except:
+				format = 'format:|fontsize:'+self.fontsizevar.get()+'|fontname:'+self.fontnamevar.get()
+			orig = format
+			format = orig.split("|")[0]
+			fontsize = orig.split("|")[1].replace("fontsize:","")
+			fontname = orig.split("|")[2].replace("fontname:","")
+			if 'underline' not in format:
+				format += 'underline '
+			else:
+				format = format.replace('underline ','')
+			self.update_format(format,orig,fontsize,fontname)
+		except:
+			pass
+
+	def size(self,*args):
+		if self.fontsizevar.get() != self.fontsize:
+			try:
+				i = self.text.tag_names(f'{tk.SEL_LAST} - 1c')
+				try:
+					format = [x for x in i if 'format:' in x][0]
+				except:
+					format = 'format:|fontsize:'+self.fontsizevar.get()+'|fontname:'+self.fontnamevar.get()
+				orig = format
+				format = orig.split('|')[0]
+				fontsize = self.fontsizevar.get()
+				fontname = orig.split('|')[2].replace("fontname:","")
+				self.update_format(format,orig,fontsize,fontname)
+				self.fontsize = fontsize
+			except:
+				pass
+
+	def font(self,*args):
+		if (self.fontnamevar.get() != self.fontname):
+			try:
+				i = self.text.tag_names(f'{tk.SEL_LAST} - 1c')
+				try:
+					format = [x for x in i if 'format:' in x][0]
+				except:
+					format = 'format:|fontsize:'+self.fontsizevar.get()+'|fontname:'+self.fontnamevar.get()
+				orig = format
+				format = orig.split('|')[0]
+				fontsize = orig.split('|')[1].replace("fontsize:","")
+				fontname = ''
+				self.update_format(format,orig,fontsize,font,1)
+				self.fontname = fontname
+			except:
+				pass
 
 	def close(self):
 		if (messagebox.askquestion(title="Save", message="Save file?") != 'no'):
 			self.save()
-		self.menu()
+		self.save_plist()
 		self.root.destroy()
 
 	def menu(self):
 		self.app = MainMenu(tk.Tk())
 
-	def new(self,content='',title='New Document'):
+	def new(self,content='',title='New Document',filename=False,args=None,data=None):
+		try:
+			a = content.keycode
+			content = ''
+		except:
+			content = content
 		self.newWindow = tk.Tk()
-		self.newWindow.title(title)
-		self.app = DocumentEditor(self.newWindow,content)
+		self.app = DocumentEditor(self.newWindow,content,title,filename,data=data)
 
-	def open(self):
+	def open(self,args=None):
 		filename = filedialog.askopenfilename()
 		if filename == '':
 			return None
-		f = open(filename,'r')
-		i = f.read()
+		self.plist['last_opened_filename'] = filename
+		f = open(filename,'rb')
+		data = pickle.load(f)
 		f.close()
-		self.new(i,filename.split('.')[0])
+		i = data['text']
+		self.new(i,filename.split('.')[0].split('/')[-1:][0],filename=filename,data=data)
 
-	def save(self, args):
+	def open_last(self,args=None):
+		try:
+			filename = self.plist['last_opened_filename']
+			f = open(filename,'rb')
+			data = pickle.load(f)
+			f.close()
+			i = data['text']
+			self.new(i,filename.split('.')[0].split('/')[-1:][0],filename=filename,data=data)
+		except:
+			self.open(self)
+
+	def save(self,args=None):
+		if self.filename == False:
+			self.save_as(self)
+		else:
+			i = self.text.get("1.0","end-1c")
+			i = ''.join([x for x in i])
+			tags = [tag for tag in self.gettext()]
+			data = {}
+			for tag in tags:
+				name = tag[0]
+				indices_tcl = tag[1]
+				indices_str = []
+				for index in indices_tcl:
+					indices_str.append(str(index))
+				data[name] = indices_str
+			data['text'] = i
+			f = open(self.filename,'wb')
+			pickle.dump(data,f)
+			f.close()
+			self.plist['last_opened_filename'] = self.filename
+			self.root.title(self.title)
+
+	def save_as(self, args=None):
 		i = self.text.get("1.0","end-1c")
+		i = ''.join([x for x in i])
+		tags = [tag for tag in self.gettext()]
+		data = {}
+		for tag in tags:
+			name = tag[0]
+			indices_tcl = tag[1]
+			indices_str = []
+			for index in indices_tcl:
+				indices_str.append(str(index))
+			data[name] = indices_str
 		filename = filedialog.asksaveasfilename(initialdir = "./",title = "Select file",filetypes = (("PhonetikWrite files","*.pwf"),("all files","*.*")))
 		if filename == '':
 			return None
-		f = open(filename,'w')
-		f.write(i)
+		data['text'] = i
+		f = open(filename,'wb')
+		pickle.dump(data,f)
 		f.close()
+		self.plist['last_opened_filename'] = filename
+		self.filename = filename
+		self.title = self.filename.split('.')[0].split('/')[-1:][0]
+		self.root.title(self.title)
 
 	def parse_chunk(self,i,returns,j,mutex):
 		# Chunk is array of 100 word strings.
@@ -155,11 +455,16 @@ class DocumentEditor:
 				whitespace.append([False,False])
 		return whitespace
 
+	def gettext(self,*args):
+		orig = deepcopy(self.text.get('1.0','end'))
+		tags = [(x,self.text.tag_ranges(x)) for x in self.text.tag_names()]
+		return tags
+
 	def correct(self):
 		pos = self.text.index(tk.INSERT)
-		print(pos)
-		original = self.text.get("1.0","end-1c")
+		original = self.text.get("1.0","end")
 		orig = deepcopy(original)
+		tags = self.gettext()
 		if orig != self.corrected:
 			i = deepcopy(orig)
 			caps = [x for x in i.split(' ') if x != '']
@@ -211,50 +516,14 @@ class DocumentEditor:
 			self.text.mark_set("insert",float(current))
 			self.text.delete('1.0', tk.END)
 			self.text.insert("1.0", out)
+			for tag in tags:
+				if tag[0]!= 'sel':
+					#tag[0] = name
+					#tag[1] = tuple of indice pairs
+					for i in range(0,len(tag[1])-1):
+						self.text.tag_add(tag[0],tag[1][i],tag[1][i+1])
 			self.text.mark_set(tk.INSERT,pos)
 			self.corrected = out
-
-class MainMenu:
-	def __init__(self,root):
-		self.root = root
-		self.root.title("PhonetikWrite")
-		self.root.geometry('200x200')
-
-		new_button = tk.Button(self.root, text="New Document", command=self.new)
-		new_button.pack()
-
-		open_button = tk.Button(self.root, text="Open Document", command=self.open)
-		open_button.pack()
-
-		menubar = tk.Menu(self.root)
-		filemenu = tk.Menu(menubar, tearoff=0)
-		filemenu.add_command(label="New", command=self.new,accelerator="Cmd+N")
-		self.root.bind("<Command-n>",self.new_m)
-		filemenu.add_command(label="Open", command=self.open,accelerator="Cmd+O")
-		self.root.bind("<Command-o>",self.open_m)
-		menubar.add_cascade(label='File',menu=filemenu)
-
-		self.root.config(menu=menubar)
-
-	def new_m(self,args):
-		self.new()
-	def open_m(self,args):
-		self.open()
-
-	def new(self,content='',title='New Document'):
-		self.newWindow = tk.Tk()
-		self.newWindow.title(title)
-		self.app = DocumentEditor(self.newWindow,content)
-		self.root.withdraw()
-
-	def open(self):
-		filename = filedialog.askopenfilename()
-		if filename == '':
-			return None
-		f = open(filename,'r')
-		i = f.read()
-		f.close()
-		self.new(i,filename.split('.')[0])
 
 	def run(self):
 		self.root.mainloop()
@@ -307,6 +576,14 @@ class Algo:
 		arr = exp(arr.astype(float))
 		arr = arr / arr.sum()
 		return arr
-gui = MainMenu(tk.Tk())
 
-gui.run()
+if __name__ == '__main__':
+	try:
+		f = open('pkl.plist','rb')
+		plist = pickle.load(f)
+		f.close()
+	except:
+		plist = None
+	gui = DocumentEditor(tk.Tk(),plist=plist)
+
+	gui.run()
