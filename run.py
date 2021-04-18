@@ -155,7 +155,7 @@ class DocumentEditor:
 		self.frame.pack_propagate(0)
 
 	def save_plist(self):
-		f = open('pkl.plist','wb')
+		f = open('./resources/pkl.plist','wb')
 		pickle.dump(self.plist,f)
 		f.close()
 
@@ -375,7 +375,7 @@ class DocumentEditor:
 			i = data['text']
 			self.new(i,filename.split('.')[0].split('/')[-1:][0],filename=filename,data=data)
 		except:
-			messagebox.showerror("File Opening Error", "The selected file has been corrupted.")
+			messagebox.showerror("File Opening Error", "The selected file has been corrupted.",icon='error')
 
 	def open_last(self,args=None):
 		try:
@@ -586,11 +586,14 @@ class Algo:
 
 if __name__ == '__main__':
 	try:
-		f = open('pkl.plist','rb')
+		f = open('./resources/pkl.plist','rb')
 		plist = pickle.load(f)
 		f.close()
 	except:
 		plist = None
-	gui = DocumentEditor(tk.Tk(),plist=plist)
-
+	root = tk.Tk()
+	img = tk.Image('photo',file='./resources/logo.png')
+	root.tk.call('wm','iconphoto', root._w, img)
+	gui = DocumentEditor(root,plist=plist)
+	#gui.call('wm','iconphoto', root._w, img)
 	gui.run()
