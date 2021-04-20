@@ -562,11 +562,7 @@ class DocumentEditor:
                         else:
                             w = whitespace[i][1] + w
                     out += w + " "
-
-            # out = re.sub('[\n\t\s]+\.','.',out)#.rstrip()
             out = out.rstrip()
-            current = self.text.index("current")
-            self.text.mark_set("insert", float(current))
             self.text.delete('1.0', tk.END)
             self.text.insert("1.0", out)
             for tag in tags:
@@ -575,7 +571,8 @@ class DocumentEditor:
                     # tag[1] = tuple of indice pairs
                     for i in range(0, len(tag[1]) - 1):
                         self.text.tag_add(tag[0], tag[1][i], tag[1][i + 1])
-            self.text.mark_set(tk.INSERT, pos)
+            diff = len(out) - len(orig)
+            self.text.mark_set(tk.INSERT + str(diff) + 'c', pos)
             self.corrected = out
 
     def run(self):
