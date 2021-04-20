@@ -406,6 +406,7 @@ class DocumentEditor:
     def close(self):
         if (messagebox.askquestion(title="Save", message="Save file?") != 'no'):
             self.save()
+        self.plist['last_opened_filename'] = self.filename
         self.save_plist()
         self.root.destroy()
 
