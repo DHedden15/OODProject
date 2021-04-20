@@ -193,8 +193,6 @@ class DocumentEditor:
                         self.text.tag_config(tag, justify=justify)
                         self.text.tag_add(tag, data[tag][i], data[tag][i + 1])
                         i += 1
-
-        self.text.bind('<period>', self.handle)
         self.text.bind('<KeyRelease>', self.update_title)
         self.text.bind('<ButtonRelease>', self.button_release)
         self.frame.pack(fill='both', expand=True)
@@ -235,7 +233,9 @@ class DocumentEditor:
 
     def update_title(self, key):
         try:
-            if key.keycode == 855638143 and self.text.compare("end-1c", "==", "1.0"):
+            if key.keycode == 788529198:
+                self.handle()
+            elif key.keycode == 855638143 and self.text.compare("end-1c", "==", "1.0"):
                 s = self.fontsizevar.get()
                 fs = self.fontnamevar.get()
                 self.text.insert('1.0', ' ')
