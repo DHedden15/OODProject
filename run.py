@@ -516,8 +516,6 @@ class DocumentEditor:
 						else:
 							w = whitespace[i][1] + w
 					out += w
-
-			#out = re.sub('[\n\t\s]+\.','.',out)#.rstrip()
 			out = out.rstrip()
 			current = self.text.index("current")
 			self.text.mark_set("insert",float(current))
@@ -537,10 +535,8 @@ class DocumentEditor:
 
 class Algo:
 	def __init__(self,inp,e,mutex):
-		##pdb.set_trace()
 		self.inp = inp
 		self.out = self.inp
-		####### IMPORTANT
 		mutex.acquire()
 		correct = e.check(self.inp)
 		mutex.release()
@@ -595,5 +591,4 @@ if __name__ == '__main__':
 	img = tk.Image('photo',file='./resources/logo.png')
 	root.tk.call('wm','iconphoto', root._w, img)
 	gui = DocumentEditor(root,plist=plist)
-	#gui.call('wm','iconphoto', root._w, img)
 	gui.run()
