@@ -165,7 +165,6 @@ class DocumentEditor:
 
         self.text = tk.Text(self.frame, borderwidth=3)
         self.items.append(self.text)
-        self.text.insert("1.0", content)
         self.text.grid(row=2, column=0, sticky='NSEW')
         self.scrollbar.config(command=self.text.yview)
         self.text.config(undo=True, yscrollcommand=self.scrollbar.set)
