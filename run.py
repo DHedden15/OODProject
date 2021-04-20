@@ -500,8 +500,8 @@ class DocumentEditor:
         whitespace = []
         for word in inp:
             try:
-                index = re.search('\.*.\s+\.*', word).start()
-                spaces = re.findall('\.*.\s+\.*', word)[0]
+                index = re.search('(\.*\s+\.*|\.+)', word).start()
+                spaces = re.findall('(\.*\s+\.*|\.+)', word)[0]
                 whitespace.append([index, spaces])
             except:
                 whitespace.append([False, False])
@@ -542,23 +542,26 @@ class DocumentEditor:
                 # or if first word
                 isFirst = True if i == 0 or '.' in caps[i - 1] else False
                 if isFirst:
-                    w = words[i][0].upper() + words[i][1:] + " "
+                    w = words[i][0].upper() + words[i][1:]
                     if whitespace[i][0] != False:
                         if whitespace[i][0] != 0:
                             w += whitespace[i][1]
                         else:
                             w = whitespace[i][1] + w
-                    out += w
+                    out += w + " "
                 elif caps[i].lower() != caps[i]:
                     out += caps[i] + " "
                 else:
-                    w = words[i]  + " "
+                    w = words[i]
                     if whitespace[i][0] != False:
                         if whitespace[i][0] != 0:
-                            w += whitespace[i][1]
+                            if whitespace[i][0] != 0:
+                                w += whitespace[i][1]
+                            else:
+                                w = w[1:] + whitespace[i][1]
                         else:
                             w = whitespace[i][1] + w
-                    out += w
+                    out += w + " "
 
             # out = re.sub('[\n\t\s]+\.','.',out)#.rstrip()
             out = out.rstrip()
