@@ -24,6 +24,7 @@ class DocumentEditor:
     def __init__(self, root, content='', title='New Document', filename=False, plist=None, data=None):
 
         self.fonts = ["Times New Roman", "Arial", "Times", "Helvetica", "Courier", "Georgia"]
+        self.items = []
 
         self.filename = filename
         self.plist = plist
@@ -38,6 +39,7 @@ class DocumentEditor:
         self.title = title
         self.root.title(self.title)
         self.frame = tk.Frame(self.root, height=500, width=500)
+        self.items.append(self.frame)
         self.root.protocol("WM_DELETE_WINDOW", self.close)
         self.frame.grid_propagate(False)
 
@@ -51,6 +53,7 @@ class DocumentEditor:
 
         self.scrollbar = tk.Scrollbar(self.frame)
         self.scrollbar.grid(row=2, column=1, sticky='NSEW')
+        self.items.append(self.scrollbar)
 
         menubar = tk.Menu(self.frame)
         self.root.config(menu=menubar)
@@ -62,67 +65,75 @@ class DocumentEditor:
         menubar.add_cascade(label="Edit", menu=editMenu)
 
         # **** Toolbar **** #
-        toolbar = tk.Frame(root, bg="medium turquoise")  # that terkwaz
+        self.toolbar = tk.Frame(self.root)# that terkwaz now in a function
+        self.items.append(self.toolbar)
 
         #boldImg = tkinter.PhotoImage(file='./resources/bold.png')
         #boldImgResize = boldImg.subsample(27, 27) image=boldImgResize bg='black'
-        boldBtn = tk.Button(toolbar, text='Bold', command=self.bold)
-        boldBtn.pack(side=LEFT, padx=2, pady=2)
+        self.boldBtn = tk.Button(self.toolbar, text='Bold', command=self.bold)
+        self.boldBtn.pack(side=LEFT, padx=2, pady=2)
+        self.items.append(self.boldBtn)
 
-        italicBtn = tk.Button(toolbar, text="Italic", command=self.italic())
-        italicBtn.pack(side=LEFT, padx=2, pady=2)
+        self.italicBtn = tk.Button(self.toolbar, text="Italic", command=self.italic)
+        self.italicBtn.pack(side=LEFT, padx=2, pady=2)
+        self.items.append(self.italicBtn)
 
-        underlineBtn = tk.Button(toolbar, text="Underline", command=self.underline())
-        underlineBtn.pack(side=LEFT, padx=2, pady=2)
+        self.underlineBtn = tk.Button(self.toolbar, text="Underline", command=self.underline)
+        self.underlineBtn.pack(side=LEFT, padx=2, pady=2)
+        self.items.append(self.underlineBtn)
 
-        strikeBtn = tk.Button(toolbar, text="Strike")
-        strikeBtn.pack(side=LEFT, padx=2, pady=2)
+        self.strikeBtn = tk.Button(self.toolbar, text="Strike")
+        self.strikeBtn.pack(side=LEFT, padx=2, pady=2)
+        self.items.append(self.strikeBtn)
 
-        textColorBtn = tk.Button(toolbar, text="Text Color", ) #command=textColor
-        textColorBtn.pack(side=LEFT, padx=2, pady=2)
+        self.textColorBtn = tk.Button(self.toolbar, text="Text Color", ) #command=textColor
+        self.textColorBtn.pack(side=LEFT, padx=2, pady=2)
+        self.items.append(self.textColorBtn)
 
-        undoBtn = tk.Button(toolbar, text="Undo", ) #command=edit_undo
-        undoBtn.pack(side=LEFT, padx=2, pady=2)
+        self.undoBtn = tk.Button(self.toolbar, text="Undo", ) #command=edit_undo
+        self.undoBtn.pack(side=LEFT, padx=2, pady=2)
+        self.items.append(self.undoBtn)
 
-        redoBtn = tk.Button(toolbar, text="Undo", ) #command=edit_redo
-        redoBtn.pack(side=LEFT, padx=2, pady=2)
+        self.redoBtn = tk.Button(self.toolbar, text="Redo", ) #command=edit_redo
+        self.redoBtn.pack(side=LEFT, padx=2, pady=2)
+        self.items.append(self.redoBtn)
 
         # **** Status Bar **** #
-        status = tk.Label(root, text="TBD", bd=1, relief=SUNKEN, anchor=W)
-        status.pack(side=BOTTOM, fill=X)
+        self.status = tk.Label(self.root, text="TBD", bd=1, relief=SUNKEN, anchor=W)
+        self.status.pack(side=BOTTOM, fill=X)
+        self.items.append(self.status)
 
-        toolbar.pack(side=TOP, fill=X)
+        self.toolbar.pack(side=TOP, fill=X)
 
         self.settingsFrame = tk.Frame(self.frame)
+        self.items.append(self.settingsFrame)
         self.settingsFrame.grid(row=0, column=0, sticky='E')
         self.fontnamevar = tk.StringVar(self.frame)
         self.fontnamevar.set(self.fontname)
         self.fontnamevar.trace('w', self.fontchange)
         self.fontMenu = tk.OptionMenu(self.settingsFrame, self.fontnamevar, *self.fonts)
         self.fontMenu.grid(row=0, column=0)
+        self.items.append(self.fontMenu)
 
         sizes = range(1, 101)
         self.fontsizevar = tk.StringVar(self.frame)
         self.fontsizevar.set(self.fontsize)
         self.sizeMenu = ttk.Combobox(self.settingsFrame, textvariable=self.fontsizevar)
+        self.items.append(self.sizeMenu)
         self.sizeMenu['values'] = [str(x) for x in range(1, 101)]
         self.sizeMenu.current(self.fontsize - 1)
         self.fontsizevar.trace('w', self.sizechange)
         self.sizeMenu.grid(row=0, column=1)
 
-        self.bold_button = tk.Button(self.settingsFrame, text='B', command=self.bold)
-        self.bold_button.grid(row=0, column=2)
-        self.italic_button = tk.Button(self.settingsFrame, text='I', command=self.italic)
-        self.italic_button.grid(row=0, column=3)
-        self.underline_button = tk.Button(self.settingsFrame, text='U', command=self.underline)
-        self.underline_button.grid(row=0, column=4)
-
         self.left_button = tk.Button(self.settingsFrame, text='L', command=self.left)
+        self.items.append(self.left_button)
         self.left_button.grid(row=1, column=0)
         self.center_button = tk.Button(self.settingsFrame, text='C', command=self.center)
         self.center_button.grid(row=1, column=1)
+        self.items.append(self.center_button)
         self.right_button = tk.Button(self.settingsFrame, text='R', command=self.right)
         self.right_button.grid(row=1, column=2)
+        self.items.append(self.right_button)
 
         self.corrected = ''
 
@@ -149,9 +160,11 @@ class DocumentEditor:
         self.root.bind("<Command-i>", self.italic)
         editMenu.add_command(label="Underline", command=self.handle, accelerator="Cmd+U")
         self.root.bind("<Command-u>", self.underline)
-        self.root.bind("<Command-l>", self.gettext)
+        editMenu.add_command(label="Turquoise...", command=self.turquoise, accelerator="Cmd+T")
+        self.root.bind("<Command-u>", self.turquoise)
 
         self.text = tk.Text(self.frame, borderwidth=3)
+        self.items.append(self.text)
         self.text.insert("1.0", content)
         self.text.grid(row=2, column=0, sticky='NSEW')
         self.scrollbar.config(command=self.text.yview)
@@ -185,6 +198,10 @@ class DocumentEditor:
         self.text.bind('<ButtonRelease>', self.button_release)
         self.frame.pack(fill='both', expand=True)
         self.frame.pack_propagate(0)
+
+    def turquoise(self, *args):
+        for item in self.items:
+            item.configure(background='medium turquoise')
 
     def save_plist(self):
         f = open('./resources/pkl.plist', 'wb')
