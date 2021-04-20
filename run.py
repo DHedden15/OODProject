@@ -7,13 +7,11 @@ import time
 from threading import *
 import pkg_resources
 import pickle
-import multiprocessing
 from jellyfish import *
 from textblob import Word
 import enchant
 from numpy import exp
 import numpy as np
-# from spellchecker import SpellChecker
 import pkg_resources
 import re
 from copy import deepcopy
@@ -500,8 +498,10 @@ class DocumentEditor:
         whitespace = []
         for word in inp:
             try:
-                index = re.search('(\.*\s+\.*|\.+)', word).start()
-                spaces = re.findall('(\.*\s+\.*|\.+)', word)[0]
+                punct = '[^a-zA-Z\s]'
+                search = re.search('(' + punct + '*\s+' + punct + '*|' + punct + '+)', word)
+                index = search.start()
+                spaces = word[index:search.end()]
                 whitespace.append([index, spaces])
             except:
                 whitespace.append([False, False])
