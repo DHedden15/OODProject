@@ -5,3 +5,4 @@ pyenchant
 symspellpy
 setuptools
 pickle-mixin
+wordfreq
