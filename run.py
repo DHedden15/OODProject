@@ -18,13 +18,15 @@ from copy import deepcopy
 from wordfreq import word_frequency
 import math
 import tkinter.messagebox as messagebox
-
+import sys
 
 class DocumentEditor:
     def __init__(self, root, content='', title='New Document', filename=False, plist=None, data=None):
 
         self.fonts = ["Times New Roman", "Arial", "Times", "Helvetica", "Courier", "Georgia"]
         self.items = []
+	
+		win = 'win' in sys.platform		
 
         self.filename = filename
         self.plist = plist
@@ -141,27 +143,37 @@ class DocumentEditor:
         self.line.grid(row=1, column=0, sticky='EW')
 
         fileMenu.add_command(label="New", command=self.new, accelerator="Cmd+N")
-        self.root.bind("<Command-n>", self.new)
+        if not win:
+			self.root.bind("<Command-n>", self.new)
         fileMenu.add_command(label="Open", command=self.open, accelerator="Cmd+O")
-        self.root.bind("<Command-o>", self.open)
+        if not win:
+			self.root.bind("<Command-o>", self.open)
         fileMenu.add_command(label="Open Last...", command=self.open_last, accelerator="Cmd+Shift+O")
-        self.root.bind("<Command-Shift-O>", self.open_last)
+        if not win:
+			self.root.bind("<Command-Shift-O>", self.open_last)
         fileMenu.add_command(label="Save as...", command=self.save_as, accelerator="Cmd+Shift+S")
-        self.root.bind("<Command-Shift-S>", self.save_as)
+        if not win:
+			self.root.bind("<Command-Shift-S>", self.save_as)
         fileMenu.add_command(label="Save...", command=self.save_as, accelerator="Cmd+S")
-        self.root.bind("<Command-s>", self.save)
+        if not win:
+			self.root.bind("<Command-s>", self.save)
         fileMenu.add_command(label="Correct Spelling...", command=self.handle, accelerator="Cmd+G")
-        self.root.bind("<Command-g>", self.handle)
+        if not win:
+			self.root.bind("<Command-g>", self.handle)
         fileMenu.add_command(label="Main Menu", command=self.menu)
 
         editMenu.add_command(label="Bold", command=self.handle, accelerator="Cmd+B")
-        self.root.bind("<Command-b>", self.bold)
+        if not win:
+			self.root.bind("<Command-b>", self.bold)
         editMenu.add_command(label="Italic", command=self.handle, accelerator="Cmd+I")
-        self.root.bind("<Command-i>", self.italic)
+        if not win:
+			self.root.bind("<Command-i>", self.italic)
         editMenu.add_command(label="Underline", command=self.handle, accelerator="Cmd+U")
-        self.root.bind("<Command-u>", self.underline)
+        if not win:
+			self.root.bind("<Command-u>", self.underline)
         editMenu.add_command(label="Turquoise...", command=self.turquoise, accelerator="Cmd+T")
-        self.root.bind("<Command-u>", self.turquoise)
+        if not win:
+			self.root.bind("<Command-u>", self.turquoise)
 
         self.text = tk.Text(self.frame, borderwidth=3)
         self.items.append(self.text)
