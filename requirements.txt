@@ -3,5 +3,5 @@ jellyfish
 textblob
 pyenchant
 symspellpy
-pkg_resources
+setuptools
 pickle
