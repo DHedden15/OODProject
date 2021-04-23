@@ -4,4 +4,4 @@ textblob
 pyenchant
 symspellpy
 setuptools
-pickle
+pickle-mixin
